@@ -137,7 +137,10 @@ class PreModel:
         # TODO: update a full-graph with less edges and add edges by potential graph training
         self.best_graph = None
         self.whether_train_graph = True
-        self.whether_explain = False
+        if args.explain == 'N':
+            self.whether_explain = False
+        else:
+            self.whether_explain = True
         self.pre_logits = None
         self.pre_dict = deepcopy(self.model.state_dict())
         self.hdiff = []
@@ -176,19 +179,19 @@ class PreModel:
         g_s = deepcopy(g)
         g_s = dropedge(g_s)
 
-        if self.whether_explain == True:
-            src, dst= g.edges()
-            if self.prob == 'gcn':
-                print("ours prob")
-                prob = g.ndata['p_norm'][dst.long()]
-            elif self.prob == 'saint':
-                print("saints prob")
-                prob = g.edata['p_norm']
-            selected_edges = torch.unique(choice(g.num_edges(), size=self.num_edges, prob=prob, replace=False))
-            add_nodes0, add_nodes1 = torch.cat([src[selected_edges]]), torch.cat([dst[selected_edges]])
-            g_s = g_s.to('cpu')
-            add_nodes0, add_nodes1 = self.simple_edges(g_s, add_nodes0.type(torch.int32), add_nodes1.type(torch.int32))
-            g_s = add_edges(g_s, add_nodes0, add_nodes1)      
+        # for subgraph trianing with probability
+        # src, dst= g.edges()
+        # if self.prob == 'gcn':
+        #     print("ours prob")
+        #     prob = g.ndata['p_norm'][dst.long()]
+        # elif self.prob == 'saint':
+        #     print("saints prob")
+        #     prob = g.edata['p_norm']
+        # selected_edges = torch.unique(choice(g.num_edges(), size=self.num_edges, prob=prob, replace=False))
+        # add_nodes0, add_nodes1 = torch.cat([src[selected_edges]]), torch.cat([dst[selected_edges]])
+        # g_s = g_s.to('cpu')
+        # add_nodes0, add_nodes1 = self.simple_edges(g_s, add_nodes0.type(torch.int32), add_nodes1.type(torch.int32))
+        # g_s = add_edges(g_s, add_nodes0, add_nodes1)      
               
         g_s = g_s.to(self.device)
         
@@ -398,6 +401,7 @@ if __name__ == "__main__":
     parser.add_argument('--edges', type=int, default=999999999)
     parser.add_argument('--size', type=int, default=999999999)
     parser.add_argument('--drop', type=float, default=1)
+    parser.add_argument('--explain', type=str, default='N')
     args = parser.parse_args()
     print(args.prob, args.memory, args.th, args.data, args.edges, args.drop, args.size)
 
