@@ -168,7 +168,10 @@ class PreModel:
         elif self.dataset == 'pubmed':
             self.first_size = 5000
             self.second_size = 200
-        elif self.dataset == 'reddit':
+        elif self.dataset == 'reddit' or self.dataset == 'amazon' or self.dataset == 'proteins':
+            self.first_size = 500000
+            self.second_size = 100000
+        elif self.dataset == 'products':
             self.first_size = 500000
             self.second_size = 100000
 
@@ -183,20 +186,13 @@ class PreModel:
         self.estimator = EstimateGraph().to(self.device)
         
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.01, weight_decay=5e-4)
-        
-        # TODO: adding sampling graph
-        # GraphSAINT sampling
-        # sampler = SAINTSampler(mode='edge', budget=6000)
-        # loader = DataLoader(g, torch.arange(1000), sampler)
-        
-        # print("get subgraph!")
             
         dropedge = DropEdge(p=self.drop)
         g_s = deepcopy(g)
         g_s = dropedge(g_s)
 
         # src, dst= g.edges()
-        # if self.prob == 'ours':
+        # if self.prob == 'sage':
         #     print("ours prob")
         #     prob = g.ndata['p_norm'][dst.long()]
         # elif self.prob == 'saint':
@@ -429,35 +425,7 @@ class PreModel:
             self.peak_memory = GPUs[1].memoryUsed
         del logits, pre_logits, loss
         torch.cuda.empty_cache()
-
-
-class EstimateGraph(nn.Module):
-    def __init__(self):
-        super(EstimateGraph, self).__init__()
-        # TODO: potential graph shoulb be sampled each train_graph time(put it into forwad after sampling)
-        self.potential_graph = None
-        self.estimated_weights = None
-        self.distance = nn.PairwiseDistance(p=2)
         
-        
-    def forward(self, g):  
-        
-        # transfer the features by MLP
-        features = g.ndata['feat']
-        p_norm = g.ndata['p_norm']
-        
-        # print("num of subgraph's node: ", features.size(0))
-   
-        self.potential_graph = g
-        print("num of subgraph's edge: ", self.potential_graph.edges()[0].size())
-
-        node_p_norm = p_norm[self.potential_graph.edges()[1].tolist()]
-        
-        self.estimated_weights = node_p_norm
-
-        
-        # return 0
-
 
 if __name__ == "__main__":
     
@@ -598,37 +566,6 @@ if __name__ == "__main__":
         num_class = (labels.max() + 1).item()
         print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
     
-    if args.data == 'papers100M':
-        # load and preprocess products dataset
-        transform = (AddSelfLoop()) 
-        data = DglNodePropPredDataset(name='ogbn-papers100M')
-        
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-        
-        # labels = labels.view(-1).type(torch.int)
-        
-        splitted_idx = data.get_idx_split()
-        train_idx, val_idx, test_idx = (
-            splitted_idx["train"],
-            splitted_idx["valid"],
-            splitted_idx["test"],
-        )
-        g, labels = data[0]
-        nfeat = g.ndata.pop("feat")
-        labels = labels[:, 0]
-
-        g.ndata['feat'] = nfeat
-        g.ndata['label'] = labels
-        train_mask = torch.zeros(g.num_nodes())
-        train_mask[train_idx] = 1
-        val_mask = torch.zeros(g.num_nodes())
-        val_mask[val_idx] = 1
-        g.ndata['train_mask'] = train_mask.byte()
-        g.ndata['val_mask'] = val_mask.byte()
-        
-        num_class = 172
-        print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
-    
     if args.data == 'proteins':  
         # load and preprocess proteins dataset 64
         transform = (AddSelfLoop()) 
@@ -658,34 +595,6 @@ if __name__ == "__main__":
 
         num_class = 112
         print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
-    
-    if args.data == 'friendster':
-        bin_path = "./dataset/friendster/friendster.bin"
-        if os.path.exists(bin_path):
-            g_list, _ = dgl.load_graphs(bin_path)
-            g = g_list[0]
-        else:
-            df = pandas.read_csv('./dataset/friendster/com-friendster.ungraph.txt.gz', sep='\t', skiprows=4, header=None,
-                            names=['src', 'dst'], compression='gzip')
-            src = df['src'].values
-            dst = df['dst'].values
-            print('construct the graph')
-            g = graph((src, dst))
-            # the original node IDs of friendster are not consecutive, so we compact it
-            g = dgl.compact_graphs(g)
-            dgl.save_graphs(bin_path, [g])
-
-    if args.prob == 'gcn':
-        # for ours gcn
-        print("cal probability gcn")
-        d1 = torch.pow(g.out_degrees(), -0.5)
-        p_norm = []
-        for i in g.nodes():
-            neighbors = g.out_edges(i)[1].long()
-            d2 = d1[neighbors] * d1[i]
-            norm_2 = torch.norm(d2, p=2)
-            p_norm.append(norm_2)
-        g.ndata['p_norm'] = torch.tensor(p_norm)
 
     if args.prob == 'sage':
         # for graphsage
@@ -710,10 +619,21 @@ if __name__ == "__main__":
         prob /= prob.sum()
         g.edata['p_norm'] = prob
 
-    # node0 = g.ndata["label"][g.edges()[0].long()]
-    # node1 = g.ndata["label"][g.edges()[1].long()]
-    # print(g.num_edges(), torch.sum(node0 == node1))
-    # model = GraphSAGE_model(g.ndata['feat'].size(1), 128, num_class, 1, F.relu, 0.5, aggregator_type='gcn')
-    model = GNNModel('sage', 4, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
-    pre_model = PreModel(model, device, args)
+    if args.data == 'cora' or args.data == 'citeseet' or args.data == 'pubmed':
+        learning_rate = 0.01
+        model = GCN(g.ndata['feat'].size(1), 128, num_class)
+    elif args.data == 'reddit':
+        learning_rate = 0.01
+        model = GNNModel('sage', 4, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
+    elif args.data == 'amazon':
+        learning_rate = 0.01
+        model = GNNModel('sage', 3, 128, g.ndata['feat'].size(1), num_class, 0).to(device)
+    elif args.data == 'products':
+        learning_rate = 0.003
+        model = GNNModel('sage', 3, 128, g.ndata['feat'].size(1), num_class, 0).to(device)
+    elif args.data == 'proteins':
+        learning_rate = 0.01
+        model = GNNModel('sage', 3, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
+        
+    pre_model = PreModel(model, device, args, learning_rate)
     good_edges = pre_model.find_graph(g)
