@@ -192,7 +192,7 @@ class PreModel:
         #     g_s = g_s.to(self.device)
         #     self.pre_dict = deepcopy(self.model.state_dict())
 
-        for epoch in range(20): 
+        for epoch in range(3000): 
         
             t1 = time.time() 
             # dropedge
