@@ -242,7 +242,7 @@ y6 = [95.33,95.33,95.39,95.35,95.44,95.37,95.42]
 # plt.legend(ncols=2,loc='upper center',frameon=True,bbox_to_anchor=(0.5,1.16),prop={'size': 18})
 # plt.tight_layout()
 # plt.gcf().set_size_inches(9, 5)
-# plt.savefig('gcn_memory.png', dpi=600)
+# plt.savefig('fig/gcn_memory.png', dpi=600)
 # plt.show()
 
 #-*- coding:utf-8 -*-
@@ -297,7 +297,7 @@ y6 = [95.33,95.33,95.39,95.35,95.44,95.37,95.42]
 #     ax = plt.gca()
 #     # ax.set_aspect(1)
 #     plt.tight_layout()
-#     plt.savefig('bar.png', dpi=600)
+#     plt.savefig('fig/bar.png', dpi=600)
 #     plt.show()
 
 
@@ -370,7 +370,7 @@ y6 = [95.33,95.33,95.39,95.35,95.44,95.37,95.42]
 #     y_fill = [y_b, y, y, y_b]
 #     plt.fill(x_fill, y_fill, alpha=0.2, c=color[i])
 # plt.tight_layout()
-# plt.savefig('earlystop_sage.png', dpi=600)
+# plt.savefig('fig/earlystop_sage.png', dpi=600)
 # plt.show()
 
 # early stop for gcn
@@ -432,25 +432,5 @@ plt.xlabel('epoch')
 plt.ylabel('MID')
 plt.plot(x, y, marker='o', markersize=1)
 plt.tight_layout()
-plt.savefig('earlystop_gcn.png', dpi=600)
+plt.savefig('fig/earlystop_gcn.png', dpi=600)
 plt.show()
-
-# def readTxtNumpy(filename, col):
-#     data = np.loadtxt(filename, dtype=np.float32, delimiter=' ', usecols=(col))
-#     return data[:]
-
-# x = [i for i in range(3000)]
-# y = readTxtNumpy('record0.txt', 1)
-# y1 = readTxtNumpy('record0.txt', 2)
-# color = ['b','c','g','k','m','r','y']
-# for i in range(5):
-#     y_temp = y[i*3000: (i+1)*3000]
-#     y1_temp = y1[i*3000: (i+1)*3000]
-#     print(np.where(y1_temp==np.max(y1_temp)))
-#     plt.scatter(x, y_temp, c=color[i], s=1)
-#     plt.scatter(x, y1_temp, c=color[i], s=1)
-
-# plt.xlim((0, 3000))
-# plt.ylim((0, 1))
-# plt.savefig('smooth_compare.png')
-# plt.show()   
