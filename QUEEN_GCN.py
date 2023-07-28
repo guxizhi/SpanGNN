@@ -19,7 +19,6 @@ import numpy as np
 from sklearn.metrics import classification_report, f1_score
 from sklearn.preprocessing import StandardScaler
 
-from dgl.dataloading import SAINTSampler, DataLoader, ClusterGCNSampler, NeighborSampler
 from ogb.nodeproppred import DglNodePropPredDataset, Evaluator
 
 from dgl import sampling
@@ -31,10 +30,8 @@ import scipy.sparse as sp
 import numpy as np
 import os
 import sys
-from GPU_Memory import get_gpu_process_info
 
 from amazon import load_data
-from yelp import load_yelp
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -570,7 +567,16 @@ if __name__ == "__main__":
         print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
 
     if args.prob == 'gcn':
-        # for gcn
+        # for ours gcn
+        print("cal probability gcn")
+        d1 = torch.pow(g.out_degrees(), -0.5)
+        p_norm = []
+        for i in g.nodes():
+            neighbors = g.out_edges(i)[1].long()
+            d2 = d1[neighbors] * d1[i]
+            norm_2 = torch.norm(d2, p=2)
+            p_norm.append(norm_2)
+        g.ndata['p_norm'] = torch.tensor(p_norm)
         
 
     if args.prob == 'saint':
