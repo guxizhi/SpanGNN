@@ -136,16 +136,16 @@ class PreModel:
                 src, dst= g.edges()
                 sampled_edges = torch.unique(choice(g.num_edges(), size=self.first_size, prob=None))
                 # print(sampled_edges.size())
-                if self.prob == 'gcn' or self.prob == 'sage':
+                if self.prob == 'gradient':
                     print("ours prob")
                     prob = g.ndata['p_norm'][dst[sampled_edges].long()]
                     selected_edges = torch.unique(choice(len(sampled_edges), size=self.second_size, prob=prob))
-                elif self.prob == 'saint':
+                elif self.prob == 'feature':
                     print("saints prob")
                     prob = g.edata['p_norm'][sampled_edges]
                     selected_edges = torch.unique(choice(len(sampled_edges), size=self.second_size, prob=prob))
                 else:
-                    print("no prob")
+                    print("random")
                     selected_edges = torch.unique(choice(len(sampled_edges), size=self.second_size, prob=None))
                 selected_edges = sampled_edges[selected_edges]
                 add_nodes0, add_nodes1 = torch.cat([src[selected_edges]]), torch.cat([dst[selected_edges]])
@@ -312,7 +312,7 @@ class PreModel:
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--prob', type=str, default='gcn')
+    parser.add_argument('--prob', type=str, default='gradient')
     parser.add_argument('--memory', type=int, default=99999)
     parser.add_argument('--th', type=float, default=99999)
     parser.add_argument('--data', type=str, default=None)
@@ -478,7 +478,7 @@ if __name__ == "__main__":
         num_class = 112
         print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
 
-    if args.prob == 'gcn':
+    if args.prob == 'gradient':
         # for ours gcn
         print("cal probability gcn")
         d1 = torch.pow(g.out_degrees(), -0.5)
@@ -491,7 +491,7 @@ if __name__ == "__main__":
         g.ndata['p_norm'] = torch.tensor(p_norm)
         
 
-    if args.prob == 'saint':
+    if args.prob == 'feature':
         # for graphsaint's prob
         print("cal probability graphsaint")
         src, dst = g.edges()
