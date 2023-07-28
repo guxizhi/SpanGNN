@@ -2,7 +2,15 @@
 
 QUEEN is a quick incremtnal memory-efficent graph augmentation framework with lower augmentation complexity and peak GPU memory usage.
 
-## How to run QUEEN without mutal information based ealy-stop strategy?
+## To prepare the environment for running QUEEN.
+
+```bash
+pip install -r requirements.txt
+```
+
+## Quick Strat
+
+### How to run QUEEN without mutal information based ealy-stop strategy?
 
 To run GCN with QUEEN
 
@@ -16,11 +24,11 @@ To run GraphSAGE with QUEEN
 python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --memory=9500
 ```
 
-To change edge sampling strategy, just set prob='feature'.  
-To set memory limitation advanced, just set memory=xxx.  
-To change dataset， just set data='xxx' and we support Cora, Citesser, Pubmed, Reddit, ogbn-products, ogbn-proteins and Amazon now (should be in lower case).
+To change edge sampling strategy, set prob='feature' or pron='gcn' or prob='sage'.  
+To set memory limitation advanced, just set memory=xxx (all memory limitations are allowed).  
+To change dataset, just set data='xxx' and we support Cora, Citesser, Pubmed, Reddit, ogbn-products, ogbn-proteins and Amazon now (should be in lower case).
 
-## How to run QUEEN with mutual information based early-stop strategy?
+### How to run QUEEN with mutual information based early-stop strategy?
 
 To run GCN with QUEEN and early-stop:
 
@@ -35,9 +43,9 @@ python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --memory=9500 --expl
 ```
 
 The treshold for early-stop can fluctuate around the above setting value to stop earlier or later.  
-And the mutual information releated result at each iteration will be recored in 'record.txt'.
+And the mutual information releated logs at each iteration will be recored in 'record.txt'.
 
-## All figures of experimenteal results can be obtained by draw.py.
+## All figures of experimental results can be obtained by draw.py.
 
 ```bash
 python draw.py
