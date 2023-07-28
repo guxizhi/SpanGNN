@@ -42,29 +42,24 @@ import requests
 import pandas
 
 
-class GraphSAGE_model(nn.Module):
-    def __init__(self,
-                 in_feats,
-                 n_hidden,
-                 n_classes,
-                 n_layers,
-                 activation,
-                 dropout,
-                 aggregator_type):
-        super(GraphSAGE_model, self).__init__()
+class GCN(nn.Module):
+    def __init__(self, in_size, hid_size, out_size):
+        super().__init__()
         self.layers = nn.ModuleList()
-        # input layer
-        self.layers.append(dglnn.SAGEConv(in_feats, n_hidden, aggregator_type, feat_drop=0., activation=activation))
-        # hidden layers
-        for i in range(n_layers - 1):
-            self.layers.append(dglnn.SAGEConv(n_hidden, n_hidden, aggregator_type, feat_drop=dropout, activation=activation))
-        # output layer
-        self.layers.append(dglnn.SAGEConv(n_hidden, n_classes, aggregator_type, feat_drop=dropout, activation=None))
+        # two-layer GCN
+        self.layers.append(
+            dglnn.GraphConv(in_size, hid_size, activation=F.relu, allow_zero_in_degree=True)
+        )
+        self.layers.append(dglnn.GraphConv(hid_size, out_size, allow_zero_in_degree=True))
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, g, features):
         h = features
-        for layer in self.layers:
+        for i, layer in enumerate(self.layers):
+            if i != 0:
+                h = self.dropout(h)
             h = layer(g, h)
+
         return h
 
 
