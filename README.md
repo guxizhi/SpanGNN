@@ -1,6 +1,6 @@
 # QUEEN
 
-QUEEN is a quick incremtnal memory-efficent graph augmentation framework.
+QUEEN is a quick incremtnal memory-efficent graph augmentation framework with lower augmentation complexity and peak GPU memory usage.
 
 ## How to run QUEEN without mutal information based ealy-stop strategy?
 
