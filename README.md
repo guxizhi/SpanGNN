@@ -2,7 +2,7 @@
 
 QUEEN is a quick incremtnal memory-efficent graph augmentation framework with lower augmentation complexity and peak GPU memory usage.
 
-## To prepare the environment for running QUEEN
+## To prepare the environment for running QUEEN.
 
 ```bash
 pip install -r requirements.txt
@@ -41,9 +41,9 @@ python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --memory=9500 --expl
 ```
 
 The treshold for early-stop can fluctuate around the above setting value to stop earlier or later.  
-And the mutual information releated result at each iteration will be recored in 'record.txt'.
+And the mutual information releated logs at each iteration will be recored in 'record.txt'.
 
-## All figures of experimenteal results can be obtained by draw.py.
+## All figures of experimental results can be obtained by draw.py.
 
 ```bash
 python draw.py
