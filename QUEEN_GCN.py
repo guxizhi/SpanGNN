@@ -82,12 +82,8 @@ class PreModel:
     
     def find_graph(self, g):
         self.input_size = g.ndata['feat'].size(1)
-        # self.explain_threshold = torch.sum(g.ndata['train_mask'] == 1) * 0.12
+
         print("explain threshold: ", self.explain_threshold)
-        
-        # A GNN to estimate features
-        # TODO: estimator 
-        self.estimator = EstimateGraph().to(self.device)
         
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.01, weight_decay=5e-4)
             
