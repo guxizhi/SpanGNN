@@ -2,6 +2,12 @@
 
 QUEEN is a quick incremtnal memory-efficent graph augmentation framework with lower augmentation complexity and peak GPU memory usage.
 
+## To prepare the environment for running QUEEN
+
+```bash
+pip install -r requirements.txt
+```
+
 ## How to run QUEEN without mutal information based ealy-stop strategy?
 
 To run GCN with QUEEN
