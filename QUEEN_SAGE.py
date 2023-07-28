@@ -403,7 +403,7 @@ class PreModel:
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--prob', type=str, default='ours')
+    parser.add_argument('--prob', type=str, default='sage')
     parser.add_argument('--memory', type=int, default=99999)
     parser.add_argument('--th', type=float, default=99999)
     parser.add_argument('--data', type=str, default=None)
