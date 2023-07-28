@@ -34,7 +34,8 @@ To run GraphSAGE with QUEEN and early-stop:
 python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --memory=9500 --explain='Y' --th=0.11
 ```
 
-The treshold for early-stop can fluctuate about the above ssetting value to stop earlier or later.
+The treshold for early-stop can fluctuate around the above setting value to stop earlier or later.  
+And the mutual information releated result at each iteration will be recored in 'record.txt'.
 
 ## All figures of experimenteal results can be obtained by draw.py.
 
