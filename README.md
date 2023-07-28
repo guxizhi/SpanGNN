@@ -32,17 +32,17 @@ To change edge sampling strategy, set prob='feature' or prob='gradient'.
 python QUEEN_GCN.py --data='reddit' --prob='feature' --memory=8500  
 ```
 
-To change dataset, setting data='xxx' and we support Cora, Citesser, Pubmed, Reddit, ogbn-products, ogbn-proteins and Amazon now (should be in lower case).
+To change dataset, setting data='xxx' and we support 'cora', 'citesser', 'pubmed', 'reddit', 'products', 'proteins' and 'amazon'. Amazon dataset can be obtained from graphsaint, while other directly obtained by dgl.data.
 
 ### How to run QUEEN with mutual information based early-stop strategy?
 
-To run GCN with QUEEN and early-stop:
+Runing GCN with QUEEN and early-stop:
 
 ```bash
 python QUEEN_GCN.py --data='reddit' --prob='gradient' --memory=8500 --explain='Y' --th=0.11015
 ```
 
-To run GraphSAGE with QUEEN and early-stop:
+Runing GraphSAGE with QUEEN and early-stop:
 
 ```bash
 python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --memory=9500 --explain='Y' --th=0.11
