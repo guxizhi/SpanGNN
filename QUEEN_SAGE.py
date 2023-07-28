@@ -33,7 +33,7 @@ import os
 import sys
 from GPU_Memory import get_gpu_process_info
 
-from amazon import load_data
+from utils.data import load_data
 from Models import GraphSAGE, GNN_model
 
 import warnings
