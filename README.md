@@ -23,11 +23,13 @@ To change edge sampling strategy, just set prob='feature'
 To run GCN with QUEEN and early-stop
 
 ```bash
-python QUEEN_GCN.py --data='reddit' --prob='gradient' --explain='Y' --th=
+python QUEEN_GCN.py --data='reddit' --prob='gradient' --explain='Y' --memory=8500 --explain='Y' --th=0.11015
 ```
 
 To run GraphSAGE with QUEEN and early-stop
 
 ```bash
-python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --explain='Y'
+python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --memory=9500 --explain='Y' --th=0.11
 ```
+
+The treshold for early-stop can fluctuate about the above ssetting value to stop earlier or later
