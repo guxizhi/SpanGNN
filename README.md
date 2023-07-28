@@ -8,7 +8,9 @@ QUEEN is a quick incremtnal memory-efficent graph augmentation framework with lo
 pip install -r requirements.txt
 ```
 
-## How to run QUEEN without mutal information based ealy-stop strategy?
+## Quick Strat
+
+### How to run QUEEN without mutal information based ealy-stop strategy?
 
 To run GCN with QUEEN
 
@@ -26,7 +28,7 @@ To change edge sampling strategy, set prob='feature' or pron='gcn' or prob='sage
 To set memory limitation advanced, just set memory=xxx (all memory limitations are allowed).  
 To change dataset, just set data='xxx' and we support Cora, Citesser, Pubmed, Reddit, ogbn-products, ogbn-proteins and Amazon now (should be in lower case).
 
-## How to run QUEEN with mutual information based early-stop strategy?
+### How to run QUEEN with mutual information based early-stop strategy?
 
 To run GCN with QUEEN and early-stop:
 
