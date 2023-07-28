@@ -58,7 +58,10 @@ class PreModel:
         self.model = model.to(device)
         self.best_graph = None
         self.whether_train_graph = True
-        self.whether_explain = False
+        if args.explain == 'Y':
+            self.whether_explain = True
+        else: 
+            self.whether_explain = True
         self.pre_logits = None
         self.pre_dict = deepcopy(self.model.state_dict())
         self.hdiff = []
