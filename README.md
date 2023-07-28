@@ -47,8 +47,13 @@ Runing GraphSAGE with QUEEN and early-stop:
 ```bash
 python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --memory=9500 --explain='Y' --th=0.11
 ```
+The treshold for early-stop can fluctuate around the above setting value to stop earlier or later.
 
-The treshold for early-stop can fluctuate around the above setting value to stop earlier or later and the mutual information releated logs at each iteration will be recored in 'record.txt'.
+## Logs
+
+The training results, including GNN model, total trainig time, total augmentation time and val precision will be recorded in 'results.txt'.
+
+The mutual information based score for mearsure the influential information contained in each partial structure will be recorded in 'record.txt'.
 
 ## All figures of experimental results can be obtained by draw.py.
 
