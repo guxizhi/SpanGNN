@@ -569,17 +569,9 @@ if __name__ == "__main__":
         num_class = 112
         print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
 
-    if args.prob == 'sage':
-        # for graphsage
-        print("cal probability")
-        d1 = torch.pow(g.out_degrees(), -1.0)
-        p_norm = []
-        for i in g.nodes():
-            neighbors = g.out_edges(i)[1].long()
-            d2 = d1[neighbors]
-            norm_2 = torch.norm(d2, p=2)
-            p_norm.append(norm_2)
-        g.ndata['p_norm'] = torch.tensor(p_norm)
+    if args.prob == 'gcn':
+        # for gcn
+        
 
     if args.prob == 'saint':
         # for graphsaint's prob
@@ -594,7 +586,7 @@ if __name__ == "__main__":
 
     if args.data == 'cora' or args.data == 'citeseet' or args.data == 'pubmed':
         learning_rate = 0.01
-        model = GraphSAGE_model(g.ndata['feat'].size(1), 128, num_class, 2, F.relu, 0.1, 'gcn')
+        model = GCN(g.ndata['feat'].size(1), 128, num_class)
     elif args.data == 'reddit':
         learning_rate = 0.01
         model = GNNModel('sage', 4, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
