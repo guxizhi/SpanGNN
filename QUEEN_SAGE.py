@@ -179,7 +179,7 @@ class PreModel:
         print("avg iter time: ", sum(each_iter_time)/len(each_iter_time))
 
         with open("result.txt", "a") as f:
-            f.write(" gcn " + str(epoch) + " time:" + str(end - start) + " acc:" + str(self.best_val_acc) + '\n')
+            f.write("SAGE " + str(epoch) + " time:" + str(end - start) + " aug time: " + str(total_aug_time) + " precision:" + str(self.best_val_acc) + '\n')
         
         return self.best_graph
 
