@@ -33,3 +33,9 @@ python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --memory=9500 --expl
 ```
 
 The treshold for early-stop can fluctuate about the above ssetting value to stop earlier or later
+
+## All figures of experimenteal results can be obtained by draw.py
+
+```bash
+python draw.py
+```
