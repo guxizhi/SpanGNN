@@ -18,10 +18,7 @@ import time
 import numpy as np
 from sklearn.metrics import classification_report, f1_score
 from sklearn.preprocessing import StandardScaler
-
 from ogb.nodeproppred import DglNodePropPredDataset, Evaluator
-
-from dgl import sampling
 import dgl.function as fn
 import random
 import math
@@ -32,93 +29,13 @@ import os
 import sys
 
 from amazon import load_data
+from Models import GCN, GNN_model
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
-from torchmetrics.classification import MultilabelF1Score
-import matplotlib.pyplot as plt
 from sklearn.metrics import mutual_info_score
 import requests
 import pandas
-
-
-class GCN(nn.Module):
-    def __init__(self, in_size, hid_size, out_size):
-        super().__init__()
-        self.layers = nn.ModuleList()
-        # two-layer GCN
-        self.layers.append(
-            dglnn.GraphConv(in_size, hid_size, activation=F.relu, allow_zero_in_degree=True)
-        )
-        self.layers.append(dglnn.GraphConv(hid_size, out_size, allow_zero_in_degree=True))
-        self.dropout = nn.Dropout(0.5)
-
-    def forward(self, g, features):
-        h = features
-        for i, layer in enumerate(self.layers):
-            if i != 0:
-                h = self.dropout(h)
-            h = layer(g, h)
-
-        return h
-
-
-
-class GNNModel(nn.Module):
-    def __init__(self,  gnn_layer: str, n_layers: int, layer_dim: int,
-                 input_feature_dim: int, n_classes: int, n_linear: int):
-        super().__init__()
-
-        assert n_layers >= 1, 'GNN must have at least one layer'
-        dims = [input_feature_dim] + [layer_dim] * (n_layers-1) + [n_classes]
-        print(dims)
-        
-        self.convs = nn.ModuleList()
-        self.norm = nn.ModuleList()
-        
-        self.n_layers = n_layers
-        self.n_linear = n_linear
-        
-        for idx in range(n_layers):
-            if idx < n_layers - n_linear:
-                if gnn_layer == 'gat':
-                    # use 2 aattention heads
-                    # layer = dglnn.GATConv(dims[idx], dims[idx+1], 1)  # pylint: disable=no-member
-                    layer = dglnn.AGNNConv(learn_beta=False, allow_zero_in_degree=True)
-                elif gnn_layer == 'gcn':
-                    layer = dglnn.GraphConv(dims[idx], dims[idx+1], allow_zero_in_degree=True)  # pylint: disable=no-member
-                elif gnn_layer == 'sage':
-                    # Use mean aggregtion
-                    # pylint: disable=no-member
-                    layer = dglnn.SAGEConv(dims[idx], dims[idx+1],
-                                            aggregator_type='mean')
-                else:
-                    raise ValueError(f'unknown gnn layer type {gnn_layer}')
-                self.convs.append(layer)
-            else: 
-                self.convs.append(nn.Linear(dims[idx], dims[idx+1]))
-                
-            if idx < n_layers - 1:
-                self.norm.append(nn.LayerNorm(dims[idx+1], elementwise_affine=True))
-                
-            
-    def forward(self, graph, features):
-        h = features
-        for idx in range(self.n_layers):
-            
-            h = F.dropout(h, p=0.5)
-            if idx < self.n_layers - self.n_linear:
-                h = self.convs[idx](graph, h)
-                if h.ndim == 3:  # GAT produces an extra n_heads dimension
-                    h = h.mean(1)
-            else:
-                h = self.convs[idx](h)
-
-            if idx < self.n_layers - 1:
-                h = self.norm[idx](h)
-                h = F.relu(h, inplace=True)
-            
-        return h
             
             
 class PreModel:
