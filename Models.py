@@ -97,7 +97,8 @@ class GNNModel(nn.Module):
             
             h = F.dropout(h, p=0.5)
             if idx < self.n_layers - self.n_linear:
-                h = self.convs[idx](graph, h)
+                # graph->graph[idx] for minibatch training
+                h = self.convs[idx](graph[idx], h)
                 if h.ndim == 3:  # GAT produces an extra n_heads dimension
                     h = h.mean(1)
             else:

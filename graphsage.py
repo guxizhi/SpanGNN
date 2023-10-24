@@ -1,330 +1,292 @@
 import argparse
 
+import dgl
+import dgl.nn as dglnn
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-
-import dgl.nn as dglnn
-import dgl
-from dgl import AddSelfLoop
-from dgl import DropEdge
-from dgl import add_reverse_edges, add_edges, to_simple
-from dgl import graph, NID, EID
-from dgl.data import CiteseerGraphDataset, CoraGraphDataset, PubmedGraphDataset, RedditDataset, YelpDataset
-from dgl.random import choice
+import torchmetrics.functional as MF
+import tqdm
+from dgl.data import AsNodePredDataset
+from dgl.dataloading import (
+    DataLoader,
+    MultiLayerFullNeighborSampler,
+    NeighborSampler,
+    ClusterGCNSampler,
+)
+from ogb.nodeproppred import DglNodePropPredDataset
 import GPUtil
-import time
-import numpy as np
-from sklearn.metrics import classification_report, f1_score
-from sklearn.preprocessing import StandardScaler
+from dgl.data import RedditDataset
 
-from dgl.dataloading import SAINTSampler, DataLoader, ClusterGCNSampler, NeighborSampler
-from ogb.nodeproppred import DglNodePropPredDataset, Evaluator
 
-from dgl import sampling
-import dgl.function as fn
-import random
-import math
-from copy import deepcopy
-import scipy.sparse as sp
-import numpy as np
-import os
-import sys
+class SAGE(nn.Module):
+    def __init__(self, in_size, hid_size, out_size):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        # three-layer GraphSAGE-mean
+        self.layers.append(dglnn.SAGEConv(in_size, hid_size, "mean"))
+        self.layers.append(dglnn.SAGEConv(hid_size, hid_size, "mean"))
+        self.layers.append(dglnn.SAGEConv(hid_size, out_size, "mean"))
+        self.dropout = nn.Dropout(0.5)
+        self.hid_size = hid_size
+        self.out_size = out_size
 
-from utils.data import load_data
-from Models import GraphSAGE, GNNModel
+    def forward(self, blocks, x):
+        h = x
+        for l, (layer, block) in enumerate(zip(self.layers, blocks)):
+            h = layer(block, h)
+            if l != len(self.layers) - 1:
+                h = F.relu(h)
+                h = self.dropout(h)
+        return h
 
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
-from torchmetrics.classification import MultilabelF1Score
-import matplotlib.pyplot as plt
-from sklearn.metrics import mutual_info_score
-import requests
-import pandas
-
-            
-class PreModel:
-    
-    def __init__(self, model, device, arg):
-        self.device = device
-        self.most_GPU_memory = args.memory
-        self.best_val_acc = 0
-        self.best_val_loss = 100
-        self.weights = None
-        self.estimator = None
-        self.best_model = None
-        self.model = model.to(device)
-        self.best_graph = None
-        self.whether_train_graph = True
-        if args.explain == 'Y':
-            self.whether_explain = True
-        else: 
-            self.whether_explain = True
-        self.pre_logits = None
-        self.pre_dict = deepcopy(self.model.state_dict())
-        self.hdiff = []
-        self.explain_threshold = args.th
-        self.peak_memory = 0
-        self.num_edges = args.edges
-        self.epoch_record = 0
-        self.prob = args.prob
-        self.current_edges = 0
-        self.drop = args.drop
-        self.dataset = args.data
-        if self.dataset == 'reddit' or self.dataset == 'amazon' or self.dataset == 'proteins':
-            self.learning = 0.01
-        elif self.dataset == 'products':
-            self.learning = 0.003
-
-    
-    def find_graph(self, g):
-        self.input_size = g.ndata['feat'].size(1)
-        
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.01, weight_decay=5e-4)
-            
-        sampler = NeighborSampler([10, 10, 10],  # fanout for [layer-0, layer-1, layer-2]
-        prefetch_node_feats=["feat"],
-        prefetch_labels=["label"],
-        )
-        train_dataloader = DataLoader(
+    def inference(self, g, device, batch_size):
+        """Conduct layer-wise inference to get all the node embeddings."""
+        feat = g.ndata["feat"]
+        sampler = MultiLayerFullNeighborSampler(1, prefetch_node_feats=["feat"])
+        dataloader = DataLoader(
             g,
-            train_idx,
+            torch.arange(g.num_nodes()).to(g.device),
             sampler,
             device=device,
-            batch_size=1024,
-            shuffle=True,
+            batch_size=batch_size,
+            shuffle=False,
             drop_last=False,
             num_workers=0,
         )
-                
-        start = time.time()
+        buffer_device = torch.device("cpu")
+        pin_memory = buffer_device != device
 
-        for epoch in range(10): 
+        for l, layer in enumerate(self.layers):
+            y = torch.empty(
+                g.num_nodes(),
+                self.hid_size if l != len(self.layers) - 1 else self.out_size,
+                dtype=feat.dtype,
+                device=buffer_device,
+                pin_memory=pin_memory,
+            )
+            feat = feat.to(device)
+            for input_nodes, output_nodes, blocks in tqdm.tqdm(dataloader):
+                x = feat[input_nodes]
+                h = layer(blocks[0], x)  # len(blocks) = 1
+                if l != len(self.layers) - 1:
+                    h = F.relu(h)
+                    h = self.dropout(h)
+                # by design, our output nodes are contiguous
+                y[output_nodes[0] : output_nodes[-1] + 1] = h.to(buffer_device)
+            feat = y
+        return y
+    
+    
+class GCN(nn.Module):
+    def __init__(self, in_size, hid_size, out_size):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        # three-layer GraphSAGE-mean
+        self.layers.append(dglnn.GraphConv(in_size, hid_size, activation=F.relu, allow_zero_in_degree=True))
+        self.layers.append(dglnn.GraphConv(hid_size, hid_size, activation=F.relu, allow_zero_in_degree=True))
+        self.layers.append(dglnn.GraphConv(hid_size, out_size, allow_zero_in_degree=True))
+        self.dropout = nn.Dropout(0.5)
+        self.hid_size = hid_size
+        self.out_size = out_size
 
-            for it, (input_nodes, output_nodes, blocks) in enumerate(train_dataloader):
-                
-                t1 = time.time()
-                self.train_gcn(blocks, epoch)
-                t2 = time.time()
-            
-            total_train_time += t2 - t1
-        
-        end = time.time()
-        print("time: ", end - start, total_train_time)        
-        print("best val acc: ", self.best_val_acc)
+    def forward(self, blocks, x):
+        h = x
+        for l, (layer, block) in enumerate(zip(self.layers, blocks)):
+            if l != len(self.layers) - 1:
+                h = self.dropout(h)
+            h = layer(block, h)
+        return h
 
-        with open("result.txt", "a") as f:
-            f.write("SAGE " + str(epoch) + " time:" + str(end - start) + " aug time: " + str(total_train_time) + " precision:" + str(self.best_val_acc) + '\n')
-        
-        return self.best_graph
-                
-            
-    def train_gcn(self, g, epoch):
-        features = g.ndata['feat']
-        train_idx = g.ndata['train_mask']
-        labels = g.ndata['label']
-        val_idx = g.ndata['val_mask']
-        test_idx = g.ndata['test_mask']
-        
-        print("num of graph edges", g.edges()[0].size()[0])
-               
-        self.model.train()
-        logits = self.model(g, features)
+    def inference(self, g, device, batch_size):
+        """Conduct layer-wise inference to get all the node embeddings."""
+        feat = g.ndata["feat"]
+        sampler = MultiLayerFullNeighborSampler(1, prefetch_node_feats=["feat"])
+        dataloader = DataLoader(
+            g,
+            torch.arange(g.num_nodes()).to(g.device),
+            sampler,
+            device=device,
+            batch_size=batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=0,
+        )
+        buffer_device = torch.device("cpu")
+        pin_memory = buffer_device != device
 
-        if labels.dim() == 1:
-            train_loss = F.cross_entropy(logits[train_idx], labels[train_idx])
-        else:
-            train_loss = F.binary_cross_entropy_with_logits(logits, labels, reduction='sum')
-        
-        self.optimizer.zero_grad()
-        train_loss.backward()
-        self.optimizer.step()
-        
-        # evaluate gcn
-        if self.dataset == 'proteins':
-            evaluator = Evaluator(name='ogbn-proteins')
-            print(labels.size())
-            acc = evaluator.eval({'y_true': labels[val_idx], 
-                                'y_pred': logits[val_idx],
-                                })['rocauc']
-        else:
-            acc = self.evaluate(logits, labels, val_idx)
+        for l, layer in enumerate(self.layers):
+            y = torch.empty(
+                g.num_nodes(),
+                self.hid_size if l != len(self.layers) - 1 else self.out_size,
+                dtype=feat.dtype,
+                device=buffer_device,
+                pin_memory=pin_memory,
+            )
+            feat = feat.to(device)
+            for input_nodes, output_nodes, blocks in tqdm.tqdm(dataloader):
+                x = feat[input_nodes]
+                h = layer(blocks[0], x)  # len(blocks) = 1
+                if l != len(self.layers) - 1:
+                    h = self.dropout(h)
+                # by design, our output nodes are contiguous
+                y[output_nodes[0] : output_nodes[-1] + 1] = h.to(buffer_device)
+            feat = y
+        return y
+
+
+def evaluate(model, graph, dataloader, num_classes):
+    model.eval()
+    ys = []
+    y_hats = []
+    for it, (input_nodes, output_nodes, blocks) in enumerate(dataloader):
+        with torch.no_grad():
+            x = blocks[0].srcdata["feat"]
+            ys.append(blocks[-1].dstdata["label"])
+            y_hats.append(model(blocks, x))
+    return MF.accuracy(
+        torch.cat(y_hats),
+        torch.cat(ys),
+        task="multiclass",
+        num_classes=num_classes,
+    )
+
+
+def layerwise_infer(device, graph, nid, model, num_classes, batch_size):
+    model.eval()
+    with torch.no_grad():
+        pred = model.inference(
+            graph, device, batch_size
+        )  # pred in buffer_device
+        pred = pred[nid]
+        label = graph.ndata["label"][nid].to(pred.device)
+        return MF.accuracy(
+            pred, label, task="multiclass", num_classes=num_classes
+        )
+
+
+def train(args, device, g, dataset, model, num_classes):
+    # create sampler & dataloader
+    train_idx = dataset.train_idx.to(device)
+    val_idx = dataset.val_idx.to(device)
+    
+    use_uva = args.mode == "mixed"
+    # neighbor sampling
+    sampler = NeighborSampler(
+        [10, 10, 10],  # fanout for [layer-0, layer-1, layer-2]
+        prefetch_node_feats=["feat"],
+        prefetch_labels=["label"],
+    )
+    train_dataloader = DataLoader(
+        g,
+        train_idx,
+        sampler,
+        device=device,
+        batch_size=1024,
+        shuffle=True,
+        drop_last=False,
+        num_workers=0,
+        use_uva=use_uva,
+    )
+
+    val_dataloader = DataLoader(
+        g,
+        val_idx,
+        sampler,
+        device=device,
+        batch_size=1024,
+        shuffle=True,
+        drop_last=False,
+        num_workers=0,
+        use_uva=use_uva,
+    )
+
+    opt = torch.optim.Adam(model.parameters(), lr=0.003, weight_decay=5e-4)
+
+    peak_memory = 0
+    for epoch in range(50):
+        model.train()
+        total_loss = 0
+        for it, (input_nodes, output_nodes, blocks) in enumerate(
+            train_dataloader
+        ):
+            x = blocks[0].srcdata["feat"]
+            y = blocks[-1].dstdata["label"]
+            y_hat = model(blocks, x)
+            loss = F.cross_entropy(y_hat, y)
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            total_loss += loss.item()
+        acc = evaluate(model, g, val_dataloader, num_classes)
         
         GPUs = GPUtil.getGPUs()
-        if GPUs[1].memoryUsed > self.most_GPU_memory:
-            self.epoch_record = epoch
-            self.whether_train_graph = False
-            self.whether_explain = False
-            self.peak_memory = GPUs[1].memoryUsed
-        
-        # print("current process memory used: ", get_gpu_process_info(pid=str(os.getpid())))
-        print("gcn training epoch{} train loss :{}, acc: {}, best acc:{}, memory: {}".format(epoch, train_loss, acc, self.best_val_acc, GPUs[1].memoryUsed))
-        with open("record.txt", "a") as f:
-            f.write(str(epoch) + " " + str(train_loss.item()) + " " + str(acc) + '\n')
-        
+        if GPUs[1].memoryUsed > peak_memory:
+            peak_memory = GPUs[1].memoryUsed
+            
+        print(
+            "Epoch {:05d} | Loss {:.4f} | Accuracy {:.4f} | peak memory {:.4f} ".format(
+                epoch, total_loss / (it + 1), acc.item(), peak_memory
+            )
+        )
 
-        if acc > self.best_val_acc:
-            self.best_val_acc = acc
-
-        if self.whether_explain == True:
-            with torch.no_grad():
-                pre_logits = self.pre_logits
-                self.train_explain(pre_logits, logits.cpu(), train_idx, epoch, g.num_edges(), GPUs[1].memoryUsed, acc)
-                del logits, train_loss, acc
-        else:
-            del logits, train_loss, acc
-
-        torch.cuda.empty_cache()
-        
-         
-    def evaluate(self, logits, labels, val_idx):
-        model.eval()
-        with torch.no_grad():
-            val_logits = logits[val_idx]
-            val_labels = labels[val_idx]
-            val_acc = self.calc_acc(val_logits, val_labels)
-        return val_acc
-    
-    
-    def calc_acc(self, logits, labels):
-        if labels.dim() == 1:
-            print("single label")
-            _, indices = torch.max(logits, dim=1)
-            correct = torch.sum(indices == labels)
-            return correct.item() / labels.shape[0]
-        else:
-            print("multi label")
-            logits[logits > 0] = 1
-            logits[logits <= 0] = 0
-            return f1_score(labels.cpu(), logits.cpu(), average='micro')
-        
 
 if __name__ == "__main__":
-    
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default=None)
+    parser.add_argument(
+        "--mode",
+        default="puregpu",
+        choices=["cpu", "puregpu", "puregpu"],
+        help="Training mode. 'cpu' for CPU training, 'mixed' for CPU-GPU mixed training, "
+        "'puregpu' for pure-GPU training.",
+    )
+    parser.add_argument(
+        "--dt",
+        type=str,
+        default="float",
+        help="data type(float, bfloat16)",
+    )
     args = parser.parse_args()
-    print(args.data)
+    if not torch.cuda.is_available():
+        args.mode = "cpu"
+    print(f"Training in {args.mode} mode.")
 
-    if args.data == 'reddit':
-        # load and preprocess Reddit dataset 32
-        transform = (AddSelfLoop()) 
-        data = RedditDataset()
-        
-        g = data[0]
-        g = transform(g)
-        num_class = data.num_classes
-        num_node = g.num_nodes()
-        
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-        g = g.int()
-        
-        g.ndata['label'] = g.ndata['label']
-        g.ndata['train_mask'] = g.ndata['train_mask'].bool()
-        g.ndata['val_mask'] = g.ndata['val_mask'].bool()
-        g.ndata['test_mask'] = g.ndata['test_mask'].bool()  
-        feats = g.ndata['feat']
-        scaler = StandardScaler()
-        scaler.fit(feats[g.ndata['train_mask']])
-        feats = scaler.transform(feats)
-        g.ndata['feat'] = torch.tensor(feats, dtype=torch.float)
-
-    if args.data == 'amazon':
-        # load and preprocess Amazon dataset 32
-        transform = (AddSelfLoop()) 
-        data = load_data('amazon', multilabel=True)
-        
-        g = data[2]
-        g = transform(g)
-        num_class = data[0]
-        num_node = g.num_nodes()
-        
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-        g = g.int()
-        
-        g.ndata['label'] = g.ndata['label']
-        g.ndata['train_mask'] = g.ndata['train_mask'].bool()
-        g.ndata['val_mask'] = g.ndata['val_mask'].bool()
-        g.ndata['test_mask'] = g.ndata['test_mask'].bool()  
-        feats = g.ndata['feat']
-        scaler = StandardScaler()
-        scaler.fit(feats[g.ndata['train_mask']])
-        feats = scaler.transform(feats)
-        g.ndata['feat'] = torch.tensor(feats, dtype=torch.float)
+    # load and preprocess dataset
+    print("Loading data")
     
-    if args.data == 'products':
-        # load and preprocess products dataset 64
-        transform = (AddSelfLoop()) 
-        data = DglNodePropPredDataset(name='ogbn-products')
-        
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-
-        splitted_idx = data.get_idx_split()
-        train_idx, val_idx, test_idx = (
-            splitted_idx["train"],
-            splitted_idx["valid"],
-            splitted_idx["test"],
-        )
-        g, labels = data[0]
-        g = transform(g)
-        nfeat = g.ndata.pop("feat")
-        labels = labels[:, 0]
-
-        g.ndata['feat'] = nfeat
-        g.ndata['label'] = labels
-        train_mask = torch.zeros(g.num_nodes())
-        train_mask[train_idx] = 1
-        val_mask = torch.zeros(g.num_nodes())
-        val_mask[val_idx] = 1
-        g.ndata['train_mask'] = train_mask.byte()
-        g.ndata['val_mask'] = val_mask.byte()
-        
-        num_class = (labels.max() + 1).item()
-        print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
+    # ogbn-products
+    dataset = AsNodePredDataset(DglNodePropPredDataset("ogbn-products"))
+    g = dataset[0]
     
-    if args.data == 'proteins':  
-        # load and preprocess proteins dataset 64
-        transform = (AddSelfLoop()) 
-        data = DglNodePropPredDataset(name='ogbn-proteins')
-        
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-        
-        # ogb dataset
-        splitted_idx = data.get_idx_split()
-        train_idx, val_idx, test_idx = (
-            splitted_idx["train"],
-            splitted_idx["valid"],
-            splitted_idx["test"],
-        )
-        g = data.graph[0]
-        g.ndata["label"] = data.labels.float()
-        g.edata["feat"] = g.edata["feat"].float()
+    # reddit
+    # dataset = AsNodePredDataset(RedditDataset())
+    # g = dataset[0]
+    
+    # ogbn-proteins
+    # dataset = AsNodePredDataset(RedditDataset())
+    # g = dataset[0]
+    
+    g = g.to("cuda:1" if args.mode == "puregpu" else "cpu")
+    num_classes = dataset.num_classes
+    device = torch.device("cpu" if args.mode == "cpu" else "cuda:1")
 
-        g.update_all(fn.copy_e('feat', 'm'), fn.sum('m', 'feat'))
-        print(g.ndata["feat"].size())
-        train_mask = torch.zeros(g.num_nodes())
-        train_mask[train_idx] = 1
-        val_mask = torch.zeros(g.num_nodes())
-        val_mask[val_idx] = 1
-        g.ndata['train_mask'] = train_mask.byte()
-        g.ndata['val_mask'] = val_mask.byte()
+    # create GraphSAGE model
+    in_size = g.ndata["feat"].shape[1]
+    out_size = dataset.num_classes
+    model = GCN(in_size, 128, out_size).to(device)
 
-        num_class = 112
-        print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
+    # convert model and graph to bfloat16 if needed
+    if args.dt == "bfloat16":
+        g = dgl.to_bfloat16(g)
+        model = model.to(dtype=torch.bfloat16)
 
-    elif args.data == 'reddit':
-        learning_rate = 0.01
-        model = GNNModel('sage', 4, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
-    elif args.data == 'amazon':
-        learning_rate = 0.01
-        model = GNNModel('sage', 3, 128, g.ndata['feat'].size(1), num_class, 0).to(device)
-    elif args.data == 'products':
-        learning_rate = 0.003
-        model = GNNModel('sage', 3, 128, g.ndata['feat'].size(1), num_class, 0).to(device)
-    elif args.data == 'proteins':
-        learning_rate = 0.01
-        model = GNNModel('sage', 3, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
-        
-    pre_model = PreModel(model, device, args)
-    good_edges = pre_model.find_graph(g)
+    # model training
+    print("Training...")
+    train(args, device, g, dataset, model, num_classes)
+
+    # # test the model
+    # print("Testing...")
+    # acc = layerwise_infer(
+    #     device, g, dataset.test_idx, model, num_classes, batch_size=4096
+    # )
+    # print("Test Accuracy {:.4f}".format(acc.item()))

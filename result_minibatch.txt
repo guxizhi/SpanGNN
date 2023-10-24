@@ -1,0 +1,22 @@
+SAGE：
+graphsage reddit 10_10_10_10 0.9455 10479
+clustergcn reddit 0.9402 1911
+graphsaint reddit 0.9746 1539
+
+graphsage products 10_10_10 0.9057 9217
+clustergcn products 0.8983 4329
+graphsaint products 0.8996 3131
+
+graphsage proteins 10_10_10 0.9008 12354
+
+GCN：
+graphsage reddit 10_10_10_10 0.9199 10931
+clustergcn reddit 0.9066 1895
+graphsaint reddit 0.9503 1561
+
+graphsage products 10_10_10 0.9018 10089
+clustergcn products 0.8894 4571
+graphsaint products 0.8829 3143
+
+reddit 0.01 4 256
+products 0.003 3 128
