@@ -28,7 +28,7 @@ import numpy as np
 import os
 import sys
 
-from amazon import load_data
+from utils.data import load_data
 from Models import GCN, GNN_model
 
 import warnings

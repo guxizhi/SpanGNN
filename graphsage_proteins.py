@@ -138,14 +138,15 @@ class GCN(nn.Module):
 
 def evaluate(model, graph, dataloader, num_classes):
     model.eval()
-    ys = []
-    y_hats = []
+    ys = torch.tensor([]).to("cuda:1")
+    y_hats = torch.tensor([]).to("cuda:1")
     for it, (input_nodes, output_nodes, blocks) in enumerate(dataloader):
         with torch.no_grad():
             x = blocks[0].srcdata["feat"]
-            ys.append(blocks[-1].dstdata["label"])
-            y_hats.append(model(blocks, x))
+            ys = torch.cat((ys, blocks[-1].dstdata["label"]), dim=0)
+            y_hats = torch.cat((y_hats, model(blocks, x)), dim=0)
     evaluator = Evaluator(name='ogbn-proteins')
+    print(ys.size(), y_hats.size())
     return evaluator.eval({'y_true': ys, 
                             'y_pred': y_hats,
                             })['rocauc']
@@ -172,7 +173,7 @@ def train(args, device, g, dataset, model, num_classes):
     use_uva = args.mode == "mixed"
     # neighbor sampling
     sampler = NeighborSampler(
-        [10, 10, 10],  # fanout for [layer-0, layer-1, layer-2]
+        [25, 10, 10],  # fanout for [layer-0, layer-1, layer-2]
         prefetch_node_feats=["feat"],
         prefetch_labels=["label"],
     )
@@ -200,7 +201,7 @@ def train(args, device, g, dataset, model, num_classes):
         use_uva=use_uva,
     )
 
-    opt = torch.optim.Adam(model.parameters(), lr=0.003, weight_decay=5e-4)
+    opt = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
     peak_memory = 0
     for epoch in range(50):
@@ -212,7 +213,10 @@ def train(args, device, g, dataset, model, num_classes):
             x = blocks[0].srcdata["feat"]
             y = blocks[-1].dstdata["label"]
             y_hat = model(blocks, x)
-            loss = F.cross_entropy(y_hat, y)
+            if y.dim() == 1:
+                loss = F.cross_entropy(y_hat, y)
+            else:
+                loss = F.binary_cross_entropy_with_logits(y_hat, y, reduction='sum')
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -290,7 +294,7 @@ if __name__ == "__main__":
     in_size = g.ndata["feat"].shape[1]
     out_size = num_classes
     
-    model = SAGE(in_size, 256, out_size).to(device)
+    model = GCN(in_size, 256, out_size).to(device)
 
     # convert model and graph to bfloat16 if needed
     if args.dt == "bfloat16":

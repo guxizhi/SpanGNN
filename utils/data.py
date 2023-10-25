@@ -11,12 +11,12 @@ from sklearn.metrics import f1_score
 from sklearn.preprocessing import StandardScaler
 
 
-def load_data(args, multilabel):
-    if not os.path.exists("graphsaintdata") and not os.path.exists("data"):
-        raise ValueError("The directory graphsaintdata does not exist!")
-    elif os.path.exists("graphsaintdata") and not os.path.exists("data"):
-        os.rename("graphsaintdata", "data")
-    prefix = "data/{}".format(args.dataset)
+def load_data(dataset, multilabel):
+    # if not os.path.exists("graphsaintdata") and not os.path.exists("data"):
+    #     raise ValueError("The directory graphsaintdata does not exist!")
+    # elif os.path.exists("graphsaintdata") and not os.path.exists("data"):
+    #     os.rename("graphsaintdata", "data")
+    prefix = "dataset/{}".format(dataset)
     DataType = namedtuple("Dataset", ["num_classes", "train_nid", "g"])
 
     adj_full = scipy.sparse.load_npz("./{}/adj_full.npz".format(prefix)).astype(
