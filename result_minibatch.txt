@@ -9,11 +9,11 @@ graphsaint products 0.8996 3131
 
 graphsage proteins 25_10_10 0.7870 4473.0000 
 clustergcn proteins 0.7756 2312
-graphsaint proteins
+graphsaint proteins 0.7811 1671
 
-graphsage amazon 25_10_10 
-clustergcn amazon 
-graphsaint amazon
+graphsage amazon 10_10_10 0.5621 24653
+clustergcn amazon 0.6526 3443
+graphsaint amazon 0.5684 3283
 
 GCN：
 graphsage reddit 10_10_10_10 0.9199 10931
@@ -25,12 +25,12 @@ clustergcn products 0.8894 4571
 graphsaint products 0.8829 3143
 
 graphsage proteins 25_10_10 0.7044 4347
-clustergcn proteins
-graphsaint proteins
+clustergcn proteins 0.7761 2326
+graphsaint proteins 0.7791 1671
 
-graphsage amazon 25_10_10 
-clustergcn amazon 0.7756 2312
-graphsaint amazon
+graphsage amazon 10_10_10 0.2887 24867
+clustergcn amazon 0.3535 3763
+graphsaint amazon 0.017 2291
 
 reddit 0.01 4 256
 products 0.003 3 128

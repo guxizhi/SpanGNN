@@ -81,28 +81,41 @@ num_classes = 112
 device = torch.device("cuda:1")
 
         
-model = SAGE(g.ndata["feat"].shape[1], 128, num_classes).to("cuda:1")
+model = GCN(g.ndata["feat"].shape[1], 128, num_classes).to("cuda:1")
 opt = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
 print("sampling!")
-num_partitions = 1000
-sampler = dgl.dataloading.ClusterGCNSampler(
-    g,
-    num_partitions,
-    cache_path='cluster_gcn_proteins.pkl',
-    prefetch_ndata=["feat", "label", "train_mask", "val_mask", "test_mask"],
-)
-# DataLoader for generic dataloading with a graph, a set of indices (any indices, like
-# partition IDs here), and a graph sampler.
+# CLUSTEGCN
+# num_partitions = 1000
+# sampler = dgl.dataloading.ClusterGCNSampler(
+#     g,
+#     num_partitions,
+#     cache_path='cluster_gcn_proteins.pkl',
+#     prefetch_ndata=["feat", "label", "train_mask", "val_mask", "test_mask"],
+# )
+# # DataLoader for generic dataloading with a graph, a set of indices (any indices, like
+# # partition IDs here), and a graph sampler.
+# dataloader = dgl.dataloading.DataLoader(
+#     g,
+#     torch.arange(num_partitions).to("cuda:1"),
+#     sampler,
+#     device="cuda:1",
+#     batch_size=100,
+#     shuffle=True,
+#     drop_last=False,
+#     num_workers=0,
+#     use_uva=True,
+# )
+
+# SAINT
+num_partitions = 50
+sampler = dgl.dataloading.SAINTSampler(mode='node', budget=8000)
+# Assume g.ndata['feat'] and g.ndata['label'] hold node features and labels
 dataloader = dgl.dataloading.DataLoader(
     g,
     torch.arange(num_partitions).to("cuda:1"),
     sampler,
     device="cuda:1",
-    batch_size=100,
-    shuffle=True,
-    drop_last=False,
-    num_workers=0,
     use_uva=True,
 )
 
@@ -114,6 +127,7 @@ for epoch in range(100):
     model.train()
     for it, sg in enumerate(dataloader):
         x = sg.ndata["feat"]
+        print("train size: ", x.size())
         y = sg.ndata["label"]
         m = sg.ndata["train_mask"].bool()
         y_hat = model(sg, x)
@@ -144,6 +158,7 @@ for epoch in range(100):
         val_labels, test_labels = [], []
         for it, sg in enumerate(dataloader):
             x = sg.ndata["feat"]
+            print("val size:", x.size())
             y = sg.ndata["label"]
             m_val = sg.ndata["val_mask"].bool()
             m_test = sg.ndata["test_mask"].bool()

@@ -282,9 +282,8 @@ if __name__ == "__main__":
     g.ndata['feat'] = torch.tensor(feats, dtype=torch.float)
     in_size = g.ndata["feat"].shape[1]
     out_size = num_classes
-    g = g
     
-    model = SAGE(in_size, 128, out_size).to(device)
+    model = GCN(in_size, 128, out_size).to(device)
 
     # convert model and graph to bfloat16 if needed
     if args.dt == "bfloat16":

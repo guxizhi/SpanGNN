@@ -17,6 +17,65 @@ from utils.data import load_data
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, f1_score
 from ogb.nodeproppred import DglNodePropPredDataset, Evaluator
+from dgl import AddSelfLoop
+
+
+class GNNModel(nn.Module):
+    def __init__(self,  gnn_layer: str, n_layers: int, layer_dim: int,
+                 input_feature_dim: int, n_classes: int, n_linear: int):
+        super().__init__()
+
+        assert n_layers >= 1, 'GNN must have at least one layer'
+        dims = [input_feature_dim] + [layer_dim] * (n_layers-1) + [n_classes]
+        print(dims)
+        
+        self.convs = nn.ModuleList()
+        self.norm = nn.ModuleList()
+        
+        self.n_layers = n_layers
+        self.n_linear = n_linear
+        
+        for idx in range(n_layers):
+            if idx < n_layers - n_linear:
+                if gnn_layer == 'gat':
+                    # use 2 aattention heads
+                    # layer = dglnn.GATConv(dims[idx], dims[idx+1], 1)  # pylint: disable=no-member
+                    layer = dglnn.AGNNConv(learn_beta=False, allow_zero_in_degree=True)
+                elif gnn_layer == 'gcn':
+                    layer = dglnn.GraphConv(dims[idx], dims[idx+1], allow_zero_in_degree=True)  # pylint: disable=no-member
+                elif gnn_layer == 'sage':
+                    # Use mean aggregtion
+                    # pylint: disable=no-member
+                    layer = dglnn.SAGEConv(dims[idx], dims[idx+1],
+                                            aggregator_type='mean')
+                else:
+                    raise ValueError(f'unknown gnn layer type {gnn_layer}')
+                self.convs.append(layer)
+            else: 
+                self.convs.append(nn.Linear(dims[idx], dims[idx+1]))
+                
+            if idx < n_layers - 1:
+                self.norm.append(nn.LayerNorm(dims[idx+1], elementwise_affine=True))
+                
+            
+    def forward(self, graph, features):
+        h = features
+        for idx in range(self.n_layers):
+            
+            h = F.dropout(h, p=0.5)
+            if idx < self.n_layers - self.n_linear:
+                # graph->graph[idx] for minibatch training
+                h = self.convs[idx](graph, h)
+                if h.ndim == 3:  # GAT produces an extra n_heads dimension
+                    h = h.mean(1)
+            else:
+                h = self.convs[idx](h)
+
+            if idx < self.n_layers - 1:
+                h = self.norm[idx](h)
+                h = F.relu(h, inplace=True)
+            
+        return h
 
 
 class SAGE(nn.Module):
@@ -60,11 +119,12 @@ class GCN(nn.Module):
 
 # amazon
 data = load_data('amazon', multilabel=True)
-    
+transform = (AddSelfLoop()) 
 g = data[2]
+g = transform(g)
 num_classes = data[0]
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 g.ndata['label'] = g.ndata['label']
 g.ndata['train_mask'] = g.ndata['train_mask'].bool()
@@ -75,32 +135,43 @@ scaler = StandardScaler()
 scaler.fit(feats[g.ndata['train_mask']])
 feats = scaler.transform(feats)
 g.ndata['feat'] = torch.tensor(feats, dtype=torch.float)
-in_size = g.ndata["feat"].shape[1]
-out_size = num_classes
 
         
-model = SAGE(g.ndata["feat"].shape[1], 128, num_classes).to("cuda:1")
+model = GNNModel('sage', 3, 128, g.ndata['feat'].size(1), num_classes, 0).to("cuda:0")
 opt = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
 print("sampling!")
-num_partitions = 1000
-sampler = dgl.dataloading.ClusterGCNSampler(
-    g,
-    num_partitions,
-    cache_path='cluster_gcn_amazon.pkl',
-    prefetch_ndata=["feat", "label", "train_mask", "val_mask", "test_mask"],
-)
-# DataLoader for generic dataloading with a graph, a set of indices (any indices, like
-# partition IDs here), and a graph sampler.
+# clustergcn
+# num_partitions = 1000
+# sampler = dgl.dataloading.ClusterGCNSampler(
+#     g,
+#     num_partitions,
+#     cache_path='cluster_gcn_amazon.pkl',
+#     prefetch_ndata=["feat", "label", "train_mask", "val_mask", "test_mask"],
+# )
+# # DataLoader for generic dataloading with a graph, a set of indices (any indices, like
+# # partition IDs here), and a graph sampler.
+# dataloader = dgl.dataloading.DataLoader(
+#     g,
+#     torch.arange(num_partitions).to("cuda:1"),
+#     sampler,
+#     device="cuda:1",
+#     batch_size=100,
+#     shuffle=True,
+#     drop_last=False,
+#     num_workers=0,
+#     use_uva=True,
+# )
+
+# SAINT
+num_partitions = 50
+sampler = dgl.dataloading.SAINTSampler(mode='node', budget=20000)
+# Assume g.ndata['feat'] and g.ndata['label'] hold node features and labels
 dataloader = dgl.dataloading.DataLoader(
     g,
-    torch.arange(num_partitions).to("cuda:1"),
+    torch.arange(num_partitions).to("cuda:0"),
     sampler,
-    device="cuda:1",
-    batch_size=100,
-    shuffle=True,
-    drop_last=False,
-    num_workers=0,
+    device="cuda:0",
     use_uva=True,
 )
 
@@ -127,8 +198,8 @@ for epoch in range(100):
             # y_hat[y_hat <= 0] = 0
             # acc = f1_score(y.cpu(), y_hat.cpu(), average='micro')
             GPUs = GPUtil.getGPUs()
-            if GPUs[1].memoryUsed > peak_memory:
-                peak_memory = GPUs[1].memoryUsed
+            if GPUs[0].memoryUsed > peak_memory:
+                peak_memory = GPUs[0].memoryUsed
             print("Loss", loss.item(), "GPU Mem", peak_memory, "MB")
 
     tt = time.time() - t0
@@ -143,19 +214,13 @@ for epoch in range(100):
             x = sg.ndata["feat"]
             y = sg.ndata["label"]
             m_val = sg.ndata["val_mask"].bool()
-            m_test = sg.ndata["test_mask"].bool()
             y_hat = model(sg, x)
+            y_hat[y_hat > 0] = 1
+            y_hat[y_hat <= 0] = 0
             val_preds.append(y_hat[m_val])
             val_labels.append(y[m_val])
-            test_preds.append(y_hat[m_test])
-            test_labels.append(y[m_test])
         val_preds = torch.cat(val_preds, 0)
         val_labels = torch.cat(val_labels, 0)
-        test_preds = torch.cat(test_preds, 0)
-        test_labels = torch.cat(test_labels, 0)
-        evaluator = Evaluator(name='ogbn-proteins')
-        val_preds[val_preds > 0] = 1
-        val_preds[val_preds <= 0] = 0
         val_acc = f1_score(val_labels.cpu(), val_preds.cpu(), average='micro')
         if val_acc.item() > best_val_acc:
             best_val_acc = val_acc.item()
