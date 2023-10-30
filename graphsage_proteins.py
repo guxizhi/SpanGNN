@@ -28,7 +28,7 @@ class SAGE(nn.Module):
         self.layers.append(dglnn.SAGEConv(in_size, hid_size, "mean"))
         self.layers.append(dglnn.SAGEConv(hid_size, hid_size, "mean"))
         self.layers.append(dglnn.SAGEConv(hid_size, out_size, "mean"))
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0)
         self.hid_size = hid_size
         self.out_size = out_size
 
@@ -87,7 +87,7 @@ class GCN(nn.Module):
         self.layers.append(dglnn.GraphConv(in_size, hid_size, activation=F.relu, allow_zero_in_degree=True))
         self.layers.append(dglnn.GraphConv(hid_size, hid_size, activation=F.relu, allow_zero_in_degree=True))
         self.layers.append(dglnn.GraphConv(hid_size, out_size, allow_zero_in_degree=True))
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0)
         self.hid_size = hid_size
         self.out_size = out_size
 
@@ -173,7 +173,7 @@ def train(args, device, g, dataset, model, num_classes):
     use_uva = args.mode == "mixed"
     # neighbor sampling
     sampler = NeighborSampler(
-        [25, 10, 10],  # fanout for [layer-0, layer-1, layer-2]
+        [10, 10, 10],  # fanout for [layer-0, layer-1, layer-2]
         prefetch_node_feats=["feat"],
         prefetch_labels=["label"],
     )
@@ -204,7 +204,7 @@ def train(args, device, g, dataset, model, num_classes):
     opt = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
     peak_memory = 0
-    for epoch in range(50):
+    for epoch in range(100):
         model.train()
         total_loss = 0
         for it, (input_nodes, output_nodes, blocks) in enumerate(
@@ -294,7 +294,7 @@ if __name__ == "__main__":
     in_size = g.ndata["feat"].shape[1]
     out_size = num_classes
     
-    model = GCN(in_size, 256, out_size).to(device)
+    model = SAGE(in_size, 128, out_size).to(device)
 
     # convert model and graph to bfloat16 if needed
     if args.dt == "bfloat16":

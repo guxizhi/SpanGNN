@@ -62,7 +62,7 @@ class GNNModel(nn.Module):
         h = features
         for idx in range(self.n_layers):
             
-            h = F.dropout(h, p=0.5)
+            h = F.dropout(h, p=0)
             if idx < self.n_layers - self.n_linear:
                 # graph->graph[idx] for minibatch training
                 h = self.convs[idx](graph, h)
@@ -124,7 +124,7 @@ g = data[2]
 g = transform(g)
 num_classes = data[0]
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 g.ndata['label'] = g.ndata['label']
 g.ndata['train_mask'] = g.ndata['train_mask'].bool()
@@ -137,43 +137,44 @@ feats = scaler.transform(feats)
 g.ndata['feat'] = torch.tensor(feats, dtype=torch.float)
 
         
-model = GNNModel('sage', 3, 128, g.ndata['feat'].size(1), num_classes, 0).to("cuda:0")
+model = GNNModel('gcn', 3, 128, g.ndata['feat'].size(1), num_classes, 0).to("cuda:1")
 opt = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
 print("sampling!")
+
 # clustergcn
-# num_partitions = 1000
-# sampler = dgl.dataloading.ClusterGCNSampler(
-#     g,
-#     num_partitions,
-#     cache_path='cluster_gcn_amazon.pkl',
-#     prefetch_ndata=["feat", "label", "train_mask", "val_mask", "test_mask"],
-# )
-# # DataLoader for generic dataloading with a graph, a set of indices (any indices, like
-# # partition IDs here), and a graph sampler.
+num_partitions = 1000
+sampler = dgl.dataloading.ClusterGCNSampler(
+    g,
+    num_partitions,
+    cache_path='cluster_gcn_amazon.pkl',
+    prefetch_ndata=["feat", "label", "train_mask", "val_mask", "test_mask"],
+)
+# DataLoader for generic dataloading with a graph, a set of indices (any indices, like
+# partition IDs here), and a graph sampler.
+dataloader = dgl.dataloading.DataLoader(
+    g,
+    torch.arange(num_partitions).to("cuda:1"),
+    sampler,
+    device="cuda:1",
+    batch_size=100,
+    shuffle=True,
+    drop_last=False,
+    num_workers=0,
+    use_uva=True,
+)
+
+# SAINT
+# num_partitions = 50
+# sampler = dgl.dataloading.SAINTSampler(mode='node', budget=4500)
+# # Assume g.ndata['feat'] and g.ndata['label'] hold node features and labels
 # dataloader = dgl.dataloading.DataLoader(
 #     g,
 #     torch.arange(num_partitions).to("cuda:1"),
 #     sampler,
 #     device="cuda:1",
-#     batch_size=100,
-#     shuffle=True,
-#     drop_last=False,
-#     num_workers=0,
 #     use_uva=True,
 # )
-
-# SAINT
-num_partitions = 50
-sampler = dgl.dataloading.SAINTSampler(mode='node', budget=20000)
-# Assume g.ndata['feat'] and g.ndata['label'] hold node features and labels
-dataloader = dgl.dataloading.DataLoader(
-    g,
-    torch.arange(num_partitions).to("cuda:0"),
-    sampler,
-    device="cuda:0",
-    use_uva=True,
-)
 
 durations = []
 best_val_acc = 0

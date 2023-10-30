@@ -31,7 +31,7 @@ class SAGE(nn.Module):
         self.layers.append(dglnn.SAGEConv(in_size, hid_size, "mean"))
         self.layers.append(dglnn.SAGEConv(hid_size, hid_size, "mean"))
         self.layers.append(dglnn.SAGEConv(hid_size, out_size, "mean"))
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0)
         self.hid_size = hid_size
         self.out_size = out_size
 
@@ -90,7 +90,7 @@ class GCN(nn.Module):
         self.layers.append(dglnn.GraphConv(in_size, hid_size, activation=F.relu, allow_zero_in_degree=True))
         self.layers.append(dglnn.GraphConv(hid_size, hid_size, activation=F.relu, allow_zero_in_degree=True))
         self.layers.append(dglnn.GraphConv(hid_size, out_size, allow_zero_in_degree=True))
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0)
         self.hid_size = hid_size
         self.out_size = out_size
 
@@ -141,8 +141,8 @@ class GCN(nn.Module):
 
 def evaluate(model, graph, dataloader, num_classes):
     model.eval()
-    ys = torch.tensor([]).to("cuda:1")
-    y_hats = torch.tensor([]).to("cuda:1")
+    ys = torch.tensor([]).to("cuda:0")
+    y_hats = torch.tensor([]).to("cuda:0")
     for it, (input_nodes, output_nodes, blocks) in enumerate(dataloader):
         with torch.no_grad():
             x = blocks[0].srcdata["feat"]
@@ -225,8 +225,8 @@ def train(args, device, g, dataset, model, num_classes):
         acc = evaluate(model, g, val_dataloader, num_classes)
         
         GPUs = GPUtil.getGPUs()
-        if GPUs[1].memoryUsed > peak_memory:
-            peak_memory = GPUs[1].memoryUsed
+        if GPUs[0].memoryUsed > peak_memory:
+            peak_memory = GPUs[0].memoryUsed
             
         print(
             "Epoch {:05d} | Loss {:.4f} | Accuracy {:.4f} | peak memory {:.4f} ".format(
@@ -265,7 +265,7 @@ if __name__ == "__main__":
     num_classes = data[0]
     num_node = g.num_nodes()
     
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     g = g.int()
     
     g.ndata['label'] = g.ndata['label']
@@ -283,7 +283,7 @@ if __name__ == "__main__":
     in_size = g.ndata["feat"].shape[1]
     out_size = num_classes
     
-    model = GCN(in_size, 128, out_size).to(device)
+    model = SAGE(in_size, 128, out_size).to(device)
 
     # convert model and graph to bfloat16 if needed
     if args.dt == "bfloat16":

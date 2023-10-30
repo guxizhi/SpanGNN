@@ -60,93 +60,120 @@ def readTxtNumpy(filename, col):
 # y1 = readTxtNumpy('record1.txt', 1)
 
 # gcn reddit compared dropedge and QUEEN-GFR
-x = [8500,8250,8000,7750,7500,7250,7000]
-y1 = [95.15,95.12,95.06,94.93,94.80,94.71,94.60]
-y2 = [95.26,95.29,95.22,95.07,95.07,95.04,95.04]
-y3 = [95.39,95.39,95.31,95.30,95.46,95.35,95.33]
-y4 = [94.94,94.95,94.71,94.70,94.64,94.35,94.13]
-y5 = [95.41,95.23,95.26,95.22,95.13,95.15,95.09]
-y6 = [95.33,95.33,95.39,95.35,95.44,95.37,95.42]
+# x = [8500,8250,8000,7750,7500,7250,7000]
+# # y1 = [95.15,95.12,95.06,94.93,94.80,94.71,94.60]
+# y2 = [95.26,95.29,95.22,95.07,95.07,95.04,95.04]
+# y3 = [95.39,95.39,95.31,95.30,95.46,95.35,95.33]
+# # y4 = [94.94,94.95,94.71,94.70,94.64,94.35,94.13]
+# # y5 = [95.41,95.23,95.26,95.22,95.13,95.15,95.09]
+# # y6 = [95.33,95.33,95.39,95.35,95.44,95.37,95.42]
+# y_sage = [91.99,91.99,91.99,91.99,91.99,91.99,91.99]
+# y_cluster = [90.66,90.66,90.66,90.66,90.66,90.66,90.66]
+# y_saint = [96.53,96.53,96.53,96.53,96.53,96.53,96.53]
 
 # gcn products compared dropedge and QUEEN-GFR
 # x = [20000,19500,19000,18500,18000,17500,17000]
-# y1 = [91.60,91.55,91.42,91.25,91.09,90.79,90.49]
+# # y1 = [91.60,91.55,91.42,91.25,91.09,90.79,90.49]
 # y2 = [91.50,91.42,91.47,91.40,91.36,91.21,90.88]
 # y3 = [91.63,91.65,91.69,91.60,91.68,91.57,91.42]
-# y4 = [91.34,91.44,91.19,91.12,90.81,90.61,90.13]
-# y5 = [91.66,91.58,91.60,91.28,91.30,90.94,90.47]
-# y6 = [91.77,91.81,91.84,91.80,91.72,91.61,91.57]
+# # y4 = [91.34,91.44,91.19,91.12,90.81,90.61,90.13]
+# # y5 = [91.66,91.58,91.60,91.28,91.30,90.94,90.47]
+# # y6 = [91.77,91.81,91.84,91.80,91.72,91.61,91.57]
+# y_sage = [90.18,90.18,90.18,90.18,90.18,90.18,90.18]
+# y_cluster = [88.94,88.94,88.94,88.94,88.94,88.94,88.94]
+# y_saint = [88.29,88.29,88.29,88.29,88.29,88.29,88.29]
 
 # gcn proteins compared dropedge and QUEEN-GFR
 # x = [6500,6250,6000,5750,5500,5250,5000]
-# y1 = [86.70,86.74,86.89,86.66,86.69,86.58,86.54]
+# # y1 = [86.70,86.74,86.89,86.66,86.69,86.58,86.54]
 # y2 = [87.11,87.03,86.98,86.92,86.91,86.82,86.80]
 # y3 = [87.06,87.16,87.19,87.10,87.12,87.11,87.00]
-# y4 = [86.98,86.94,86.98,86.88,86.84,86.76,86.75]
-# y5 = [86.74,86.62,86.53,86.40,86.12,86.02,85.76]
-# y6 = [86.94,86.98,86.91,86.84,86.82,86.68,86.52]
+# # y4 = [86.98,86.94,86.98,86.88,86.84,86.76,86.75]
+# # y5 = [86.74,86.62,86.53,86.40,86.12,86.02,85.76]
+# # y6 = [86.94,86.98,86.91,86.84,86.82,86.68,86.52]
+# y_sage = [71.31,71.31,71.31,71.31,71.31,71.31,71.31]
+# y_cluster = [79.30,79.30,79.30,79.30,79.30,79.30,79.30]
+# y_saint = [80.12,80.12,80.12,80.12,80.12,80.12,80.12]
 
 # gcn amazon compared dropedge and QUEEN-GFR
 # x = [20000,19500,19000,18500,18000,17500,17000]
-# y1 = [33.18,31.44,29.45,27.37,25.21,22.57,20.33]
+# # y1 = [33.18,31.44,29.45,27.37,25.21,22.57,20.33]
 # y2 = [47.79,47.57,47.39,47.18,46.51,45.70,44.26]
 # y3 = [46.78,46.78,46.78,46.78,46.78,46.78,46.78]
-# y4 = [33.58,31.46,29.26,27.54,25.34,22.86,20.44]
-# y5 = [48.38,47.30,47.23,47.17,46.92,46.55,45.86]
-# y6 = [46.90,46.90,46.90,46.90,46.90,46.90,46.90]
+# # y4 = [33.58,31.46,29.26,27.54,25.34,22.86,20.44]
+# # y5 = [48.38,47.30,47.23,47.17,46.92,46.55,45.86]
+# # y6 = [46.90,46.90,46.90,46.90,46.90,46.90,46.90]
+# y_sage = [28.73,28.73,28.73,28.73,28.73,28.73,28.73]
+# y_cluster = [46.86,46.86,46.86,46.86,46.86,46.86,46.86]
+# y_saint = [3.75,3.75,3.75,3.75,3.75,3.75,3.75]
 
 # sage reddit compared dropedge and QUEEN-GFR
 # x = [9500,9250,9000,8750,8500,8250,8000]
-# y1 = [96.20,96.11,96.13,96.09,95.95,96.00,95.81]
+# # y1 = [96.20,96.11,96.13,96.09,95.95,96.00,95.81]
 # y2 = [96.51,96.53,96.46,96.20,96.21,96.10,96.07]
 # y3 = [96.51,96.63,96.62,96.56,96.62,96.57,96.62]
-# y4 = [96.43,96.24,96.26,96.19,96.14,96.10,95.90]
-# y5 = [96.27,96.22,96.12,96.05,96.02,95.95,95.61]
-# y6 = [96.29,96.48,96.61,96.48,96.58,96.49,96.53]
+# # y4 = [96.43,96.24,96.26,96.19,96.14,96.10,95.90]
+# # y5 = [96.27,96.22,96.12,96.05,96.02,95.95,95.61]
+# # y6 = [96.29,96.48,96.61,96.48,96.58,96.49,96.53]
+# y_sage = [94.55,94.55,94.55,94.55,94.55,94.55,94.55]
+# y_cluster = [94.02,94.02,94.02,94.02,94.02,94.02,94.02]
+# y_saint = [97.46,97.46,97.46,97.46,97.46,97.46,97.46]
 
 # sage products compared dropedge and QUEEN-GFR
 # x = [24000,23500,23000,22500,22000,21500,21000]
-# y1 = [91.83,91.87,91.77,91.71,91.61,91.54,91.49]
+# # y1 = [91.83,91.87,91.77,91.71,91.61,91.54,91.49]
 # y2 = [91.33,91.28,91.26,91.00,91.08,90.78,90.63]
 # y3 = [91.86,91.84,91.77,91.91,91.90,91.94,91.83]
-# y4 = [91.72,91.62,91.59,91.59,91.63,91.40,91.21]
-# y5 = [91.36,91.29,91.14,90.90,90.66,90.20,89.95]
-# y6 = [91.92,91.86,91.82,91.84,91.83,91.67,91.52]
+# # y4 = [91.72,91.62,91.59,91.59,91.63,91.40,91.21]
+# # y5 = [91.36,91.29,91.14,90.90,90.66,90.20,89.95]
+# # y6 = [91.92,91.86,91.82,91.84,91.83,91.67,91.52]
+# y_sage = [90.57,90.57,90.57,90.57,90.57,90.57,90.57]
+# y_cluster = [89.83,89.83,89.83,89.83,89.83,89.83,89.83]
+# y_saint = [89.96,89.96,89.96,89.96,89.96,89.96,89.96]
 
 # sage proteins compared dropedge and QUEEN-GFR
-# x = [7500,7250,7000,6750,6500,6250,6000]
+x = [7500,7250,7000,6750,6500,6250,6000]
 # y1 = [90.02,90.03,89.89,89.90,89.79,89.80,89.75]
-# y2 = [90.36,90.31,90.32,90.26,90.19,90.10,90.05]
-# y3 = [90.48,90.41,90.48,90.44,90.49,90.27,90.34]
+y2 = [90.36,90.31,90.32,90.26,90.19,90.10,90.05]
+y3 = [90.48,90.41,90.48,90.44,90.49,90.27,90.34]
 # y4 = [90.36,90.36,90.25,90.34,90.24,90.15,90.24]
 # y5 = [90.10,89.93,89.94,89.92,89.76,89.74,89.70]
 # y6 = [90.21,90.16,90.29,90.18,90.17,90.05,90.04]
+y_sage = [82.35,82.35,82.35,82.35,82.35,82.35,82.35]
+y_cluster = [83.54,83.54,83.54,83.54,83.54,83.54,83.54]
+y_saint = [85.35,85.35,85.35,85.35,85.35,85.35,85.35]
 
 # sage amazon compared dropedge and QUEEN-GFR
 # x = [23000,22500,22000,21500,21000,20500,20000]
-# y1 = [75.97,76.06,76.07,76.00,76.11,75.99,75.92]
+# # y1 = [75.97,76.06,76.07,76.00,76.11,75.99,75.92]
 # y2 = [76.28,76.30,76.24,76.24,76.20,76.21,76.29]
 # y3 = [76.26,76.26,76.26,76.26,76.26,76.26,76.26]
-# y4 = [76.26,76.23,76.23,76.22,76.20,76.27,76.26]
-# y5 = [76.04,76.10,76.18,76.08,76.13,76.05,76.10]
-# y6 = [75.97,75.97,75.97,75.97,75.97,75.97,75.97]
+# # y4 = [76.26,76.23,76.23,76.22,76.20,76.27,76.26]
+# # y5 = [76.04,76.10,76.18,76.08,76.13,76.05,76.10]
+# # y6 = [75.97,75.97,75.97,75.97,75.97,75.97,75.97]
+# y_sage = [72.99,72.99,72.99,72.99,72.99,72.99,72.99]
+# y_cluster = [77.43,77.43,77.43,77.43,77.43,77.43,77.43]
+# y_saint = [75.21,75.21,75.21,75.21,75.21,75.21,75.21]
 
-# plt.title('Acc as memory limitation decreasing',fontsize=15)
-# plt.xticks(fontsize=15)
-# plt.yticks(fontsize=15)
-# plt.xlabel('memory',fontsize=15)
-# plt.ylabel('acc',fontsize=15)
+plt.title('Acc as memory limitation decreasing',fontsize=15)
+plt.xticks(fontsize=15)
+plt.yticks(fontsize=15)
+plt.xlabel('memory',fontsize=15)
+plt.ylabel('acc',fontsize=15)
 # plt.plot(x, y1, marker='o', markersize=5)
-# plt.plot(x, y2, marker='x', markersize=5)
-# plt.plot(x, y3, marker='^', markersize=5)
-# plt.plot(x, y4, marker='s', markersize=5)
-# plt.plot(x, y5, marker='+', markersize=5, linestyle='dotted')
-# plt.plot(x, y6, marker='D', markersize=5, linestyle='dotted')
-# plt.tight_layout()
-# # , loc='center left', bbox_to_anchor=(0, 0.6)
-# plt.legend(['DropEdge', 'QUEEN-G', 'QUEEN-F', 'QUEEN-R', 'Subgraph-G', 'Subgraph-F'])
-# plt.gca().invert_xaxis() 
-# plt.savefig('fig/gcn_proteins.png')
+plt.plot(x, y2, marker='x', markersize=5)
+plt.plot(x, y3, marker='^', markersize=5)
+plt.plot(x, y_sage, marker='s', markersize=5)
+plt.plot(x, y_cluster, marker='+', markersize=5)
+plt.plot(x, y_saint, marker='D', markersize=5)
+plt.text(x[3], y_sage[3], "4175")
+plt.text(x[3], y_cluster[3], "1531")
+plt.text(x[3], y_saint[3], "1671")
+plt.tight_layout()
+# , loc='center left', bbox_to_anchor=(0, 0.6)
+plt.legend(['QUEEN-G', 'QUEEN-F', 'graphsage', 'clustergcn', 'graphsaint'],loc=1)
+plt.gca().invert_xaxis() 
+plt.savefig('../fig/sage_proteins_mini.png')
 
 # sage amazon framework
 # x = [146.3,135.6,124.8,114.1,103.3,92.6,81.8]
@@ -375,62 +402,62 @@ y6 = [95.33,95.33,95.39,95.35,95.44,95.37,95.42]
 
 # early stop for gcn
 # reddit
-acc = [94.79,94.73,94.71,94.78,94.75,94.91]
-edges = [38.4,39.3,38.1,35.8,36.8,38.6]
-acc_base = [94.8,94.71,94.60]
-edges_base = [63.2,56.7,50.3]
-plt.subplot(2, 2, 1)
-plt.scatter(edges, acc, c='black')
-plt.scatter(edges_base, acc_base)
-plt.title("early stop on Reddit")
-x_b = plt.xticks()[0][0]
-y_b = plt.yticks()[0][-1]
-color = ['blue', 'green', 'yellow']
-for i, (x, y) in enumerate(zip(edges_base, acc_base)):
-    x_fill = [x_b, x_b, x, x]
-    y_fill = [y_b, y, y, y_b]
-    plt.fill(x_fill, y_fill, alpha=0.2, c=color[i])
-# proteins
-acc = [86.89,86.78,86.75,86.80,86.66,86.75]
-edges = [39.1,37.6,34.7,34.2,32.2,36.3]
-acc_base = [86.69,86.58,86.54]
-edges_base = [43.9,40.4,36.4]
-plt.subplot(2, 2, 2)
-plt.scatter(edges, acc, c='black')
-plt.scatter(edges_base, acc_base)
-plt.title("early stop on proteins")
-x_b = plt.xticks()[0][0]
-y_b = plt.yticks()[0][-1]
-color = ['blue', 'green', 'yellow']
-for i, (x, y) in enumerate(zip(edges_base, acc_base)):
-    x_fill = [x_b, x_b, x, x]
-    y_fill = [y_b, y, y, y_b]
-    plt.fill(x_fill, y_fill, alpha=0.2, c=color[i])
-# amazon
-acc = [42.52,42.54,42.73,42.51,42.47,42.35]
-edges = [74.9,74.6,74.5,73.4,73.8,73.3]
-acc_base = [25.21,22.57,20.33]
-edges_base = [111.7,98.7,85.7]
-plt.subplot(2, 2, 3)
-plt.scatter(edges, acc, c='black')
-plt.scatter(edges_base, acc_base)
-plt.title("early stop on Amazon")
-x_b = plt.xticks()[0][0]
-y_b = plt.yticks()[0][-1]
-color = ['blue', 'green', 'yellow']
-for i, (x, y) in enumerate(zip(edges_base, acc_base)):
-    x_fill = [x_b, x_b, x, x]
-    y_fill = [y_b, y, y, y_b]
-    plt.fill(x_fill, y_fill, alpha=0.2, c=color[i])
-# products
-x = [i for i in range(3000)]
-# # # y0 = readTxtNumpy('./time_compare/sage_amazon.txt', 1)[:814]
-y = readTxtNumpy('record0.txt', 1)
-plt.subplot(2, 2, 4)
-plt.title('early stop on products')
-plt.xlabel('epoch')
-plt.ylabel('MID')
-plt.plot(x, y, marker='o', markersize=1)
-plt.tight_layout()
-plt.savefig('fig/earlystop_gcn.png', dpi=600)
-plt.show()
+# acc = [94.79,94.73,94.71,94.78,94.75,94.91]
+# edges = [38.4,39.3,38.1,35.8,36.8,38.6]
+# acc_base = [94.8,94.71,94.60]
+# edges_base = [63.2,56.7,50.3]
+# plt.subplot(2, 2, 1)
+# plt.scatter(edges, acc, c='black')
+# plt.scatter(edges_base, acc_base)
+# plt.title("early stop on Reddit")
+# x_b = plt.xticks()[0][0]
+# y_b = plt.yticks()[0][-1]
+# color = ['blue', 'green', 'yellow']
+# for i, (x, y) in enumerate(zip(edges_base, acc_base)):
+#     x_fill = [x_b, x_b, x, x]
+#     y_fill = [y_b, y, y, y_b]
+#     plt.fill(x_fill, y_fill, alpha=0.2, c=color[i])
+# # proteins
+# acc = [86.89,86.78,86.75,86.80,86.66,86.75]
+# edges = [39.1,37.6,34.7,34.2,32.2,36.3]
+# acc_base = [86.69,86.58,86.54]
+# edges_base = [43.9,40.4,36.4]
+# plt.subplot(2, 2, 2)
+# plt.scatter(edges, acc, c='black')
+# plt.scatter(edges_base, acc_base)
+# plt.title("early stop on proteins")
+# x_b = plt.xticks()[0][0]
+# y_b = plt.yticks()[0][-1]
+# color = ['blue', 'green', 'yellow']
+# for i, (x, y) in enumerate(zip(edges_base, acc_base)):
+#     x_fill = [x_b, x_b, x, x]
+#     y_fill = [y_b, y, y, y_b]
+#     plt.fill(x_fill, y_fill, alpha=0.2, c=color[i])
+# # amazon
+# acc = [42.52,42.54,42.73,42.51,42.47,42.35]
+# edges = [74.9,74.6,74.5,73.4,73.8,73.3]
+# acc_base = [25.21,22.57,20.33]
+# edges_base = [111.7,98.7,85.7]
+# plt.subplot(2, 2, 3)
+# plt.scatter(edges, acc, c='black')
+# plt.scatter(edges_base, acc_base)
+# plt.title("early stop on Amazon")
+# x_b = plt.xticks()[0][0]
+# y_b = plt.yticks()[0][-1]
+# color = ['blue', 'green', 'yellow']
+# for i, (x, y) in enumerate(zip(edges_base, acc_base)):
+#     x_fill = [x_b, x_b, x, x]
+#     y_fill = [y_b, y, y, y_b]
+#     plt.fill(x_fill, y_fill, alpha=0.2, c=color[i])
+# # products
+# x = [i for i in range(3000)]
+# # # # y0 = readTxtNumpy('./time_compare/sage_amazon.txt', 1)[:814]
+# y = readTxtNumpy('record0.txt', 1)
+# plt.subplot(2, 2, 4)
+# plt.title('early stop on products')
+# plt.xlabel('epoch')
+# plt.ylabel('MID')
+# plt.plot(x, y, marker='o', markersize=1)
+# plt.tight_layout()
+# plt.savefig('fig/earlystop_gcn.png', dpi=600)
+# plt.show()

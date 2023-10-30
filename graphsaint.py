@@ -14,6 +14,64 @@ from dgl.data import RedditDataset
 import GPUtil
 
 
+class GNNModel(nn.Module):
+    def __init__(self,  gnn_layer: str, n_layers: int, layer_dim: int,
+                 input_feature_dim: int, n_classes: int, n_linear: int):
+        super().__init__()
+
+        assert n_layers >= 1, 'GNN must have at least one layer'
+        dims = [input_feature_dim] + [layer_dim] * (n_layers-1) + [n_classes]
+        print(dims)
+        
+        self.convs = nn.ModuleList()
+        self.norm = nn.ModuleList()
+        
+        self.n_layers = n_layers
+        self.n_linear = n_linear
+        
+        for idx in range(n_layers):
+            if idx < n_layers - n_linear:
+                if gnn_layer == 'gat':
+                    # use 2 aattention heads
+                    # layer = dglnn.GATConv(dims[idx], dims[idx+1], 1)  # pylint: disable=no-member
+                    layer = dglnn.AGNNConv(learn_beta=False, allow_zero_in_degree=True)
+                elif gnn_layer == 'gcn':
+                    layer = dglnn.GraphConv(dims[idx], dims[idx+1], allow_zero_in_degree=True)  # pylint: disable=no-member
+                elif gnn_layer == 'sage':
+                    # Use mean aggregtion
+                    # pylint: disable=no-member
+                    layer = dglnn.SAGEConv(dims[idx], dims[idx+1],
+                                            aggregator_type='mean')
+                else:
+                    raise ValueError(f'unknown gnn layer type {gnn_layer}')
+                self.convs.append(layer)
+            else: 
+                self.convs.append(nn.Linear(dims[idx], dims[idx+1]))
+                
+            if idx < n_layers - 1:
+                self.norm.append(nn.LayerNorm(dims[idx+1], elementwise_affine=True))
+                
+            
+    def forward(self, graph, features):
+        h = features
+        for idx in range(self.n_layers):
+            
+            h = F.dropout(h, p=0.1)
+            if idx < self.n_layers - self.n_linear:
+                # graph->graph[idx] for minibatch training
+                h = self.convs[idx](graph, h)
+                if h.ndim == 3:  # GAT produces an extra n_heads dimension
+                    h = h.mean(1)
+            else:
+                h = self.convs[idx](h)
+
+            if idx < self.n_layers - 1:
+                h = self.norm[idx](h)
+                h = F.relu(h, inplace=True)
+            
+        return h
+    
+
 class SAGE(nn.Module):
     def __init__(self, in_feats, n_hidden, n_classes):
         super().__init__()
@@ -55,14 +113,14 @@ class GCN(nn.Module):
         return h
     
 
-# dataset = dgl.data.AsNodePredDataset(DglNodePropPredDataset("ogbn-products"))
-dataset = AsNodePredDataset(RedditDataset())
+dataset = dgl.data.AsNodePredDataset(DglNodePropPredDataset("ogbn-products"))
+# dataset = AsNodePredDataset(RedditDataset())
 graph = dataset[
     0
 ]  # already prepares ndata['label'/'train_mask'/'val_mask'/'test_mask']
 
-model = GCN(graph.ndata["feat"].shape[1], 256, dataset.num_classes).to("cuda:1")
-opt = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
+model = GNNModel('sage ', 3, 128, graph.ndata['feat'].size(1), dataset.num_classes, 0).to("cuda:0")
+opt = torch.optim.Adam(model.parameters(), lr=0.003, weight_decay=5e-4)
 
 
 num_partitions = 50
@@ -70,9 +128,9 @@ sampler = dgl.dataloading.SAINTSampler(mode='node', budget=8000)
 # Assume g.ndata['feat'] and g.ndata['label'] hold node features and labels
 dataloader = dgl.dataloading.DataLoader(
     graph,
-    torch.arange(num_partitions).to("cuda:1"),
+    torch.arange(num_partitions).to("cuda:0"),
     sampler,
-    device="cuda:1",
+    device="cuda:0",
     use_uva=True,
 )
 durations = []
@@ -98,8 +156,8 @@ for epoch in range(100):
                 num_classes=dataset.num_classes,
             )
             GPUs = GPUtil.getGPUs()
-            if GPUs[1].memoryUsed > peak_memory:
-                peak_memory = GPUs[1].memoryUsed
+            if GPUs[0].memoryUsed > peak_memory:
+                peak_memory = GPUs[0].memoryUsed
             print("Loss", loss.item(), "Acc", acc.item(), "GPU Mem", peak_memory, "MB")
 
     tt = time.time() - t0

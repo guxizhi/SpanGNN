@@ -1,36 +1,36 @@
 SAGE：
 graphsage reddit 10_10_10_10 0.9455 10479
 clustergcn reddit 0.9402 1911
-graphsaint reddit 0.9746 1539
+graphsaint reddit 0.9746 1980
 
 graphsage products 10_10_10 0.9057 9217
 clustergcn products 0.8983 4329
-graphsaint products 0.8996 3131
+graphsaint products 0.8996 3131 8000
 
-graphsage proteins 25_10_10 0.7870 4473.0000 
-clustergcn proteins 0.7756 2312
-graphsaint proteins 0.7811 1671
+graphsage proteins 10_10_10 0.8235 4175
+clustergcn proteins 0.8354 1531
+graphsaint proteins 0.8535 1671 8000
 
-graphsage amazon 10_10_10 0.5621 24653
-clustergcn amazon 0.6526 3443
-graphsaint amazon 0.5684 3283
+graphsage amazon 10_10_10 0.7299 26047
+clustergcn amazon 0.7743 3699
+graphsaint amazon 0.7521 1401 4500
 
 GCN：
 graphsage reddit 10_10_10_10 0.9199 10931
 clustergcn reddit 0.9066 1895
-graphsaint reddit 0.9503 1561
+graphsaint reddit 0.9653 1555
 
 graphsage products 10_10_10 0.9018 10089
 clustergcn products 0.8894 4571
-graphsaint products 0.8829 3143
+graphsaint products 0.8829 3143 8000 
 
-graphsage proteins 25_10_10 0.7044 4347
-clustergcn proteins 0.7761 2326
-graphsaint proteins 0.7791 1671
+graphsage proteins 10_10_10 0.7131 4177
+clustergcn proteins 0.7930 1529
+graphsaint proteins 0.8012 2130 8000 
 
-graphsage amazon 10_10_10 0.2887 24867
-clustergcn amazon 0.3535 3763
-graphsaint amazon 0.017 2291
+graphsage amazon 10_10_10 0.2873 27049
+clustergcn amazon 0.4686 3835
+graphsaint amazon 0.0750 1399 4500 
 
 reddit 0.01 4 256
 products 0.003 3 128
