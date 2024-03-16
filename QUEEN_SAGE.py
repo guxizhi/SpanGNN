@@ -18,11 +18,7 @@ import time
 import numpy as np
 from sklearn.metrics import classification_report, f1_score
 from sklearn.preprocessing import StandardScaler
-
-from dgl.dataloading import SAINTSampler, DataLoader, ClusterGCNSampler, NeighborSampler
 from ogb.nodeproppred import DglNodePropPredDataset, Evaluator
-
-from dgl import sampling
 import dgl.function as fn
 import random
 import math
@@ -31,23 +27,20 @@ import scipy.sparse as sp
 import numpy as np
 import os
 import sys
-from GPU_Memory import get_gpu_process_info
 
 from utils.data import load_data
-from Models import GraphSAGE, GNNModel
+from Models import GCN, GNNModel
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
-from torchmetrics.classification import MultilabelF1Score
-import matplotlib.pyplot as plt
 from sklearn.metrics import mutual_info_score
 import requests
 import pandas
-
+            
             
 class PreModel:
     
-    def __init__(self, model, device, args):
+    def __init__(self, model, device, args, learning_rate):
         self.device = device
         self.most_GPU_memory = args.memory
         self.best_val_acc = 0
@@ -61,7 +54,7 @@ class PreModel:
         if args.explain == 'Y':
             self.whether_explain = True
         else: 
-            self.whether_explain = True
+            self.whether_explain = False
         self.pre_logits = None
         self.pre_dict = deepcopy(self.model.state_dict())
         self.hdiff = []
@@ -73,6 +66,11 @@ class PreModel:
         self.current_edges = 0
         self.drop = args.drop
         self.dataset = args.data
+        self.edge_per = args.edge_per
+        self.learning_rate = learning_rate
+        self.name = args.model
+        self.peak_edges = 99999999
+        self.edge_weight = None
         if self.dataset == 'cora':
             self.first_size = 1000
             self.second_size = 35
@@ -83,8 +81,8 @@ class PreModel:
             self.first_size = 5000
             self.second_size = 200
         elif self.dataset == 'reddit' or self.dataset == 'amazon' or self.dataset == 'proteins':
-            self.first_size = 500000
-            self.second_size = 100000
+            self.first_size = args.first_size
+            self.second_size = args.second_size
         elif self.dataset == 'products':
             self.first_size = 500000
             self.second_size = 100000
@@ -92,28 +90,37 @@ class PreModel:
     
     def find_graph(self, g):
         self.input_size = g.ndata['feat'].size(1)
-        # self.explain_threshold = torch.sum(g.ndata['train_mask'] == 1) * 0.12
+        self.orignal_edges = g.number_of_edges()
+
         print("explain threshold: ", self.explain_threshold)
         
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.01, weight_decay=5e-4)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate, weight_decay=5e-4)
             
         dropedge = DropEdge(p=self.drop)
         g_s = deepcopy(g)
         g_s = dropedge(g_s)
 
         # for subgraph trianing with probability
-        # src, dst= g.edges()
-        # if self.prob == 'gcn':
-        #     print("ours prob")
-        #     prob = g.ndata['p_norm'][dst.long()]
-        # elif self.prob == 'saint':
-        #     print("saints prob")
-        #     prob = g.edata['p_norm']
-        # selected_edges = torch.unique(choice(g.num_edges(), size=self.num_edges, prob=prob, replace=False))
-        # add_nodes0, add_nodes1 = torch.cat([src[selected_edges]]), torch.cat([dst[selected_edges]])
-        # g_s = g_s.to('cpu')
-        # add_nodes0, add_nodes1 = self.simple_edges(g_s, add_nodes0.type(torch.int32), add_nodes1.type(torch.int32))
-        # g_s = add_edges(g_s, add_nodes0, add_nodes1)      
+        src, dst= g.edges()
+        if self.prob == 'gradient':
+            print("ours prob")
+            prob = g.ndata['p_norm'][dst.long()]
+            selected_edges = torch.unique(choice(g.num_edges(), size=g.num_edges() * self.edge_per, prob=prob, replace=False))
+        elif self.prob == 'feature':
+            print("saints prob")
+            prob = g.edata['p_norm']
+            selected_edges = torch.unique(choice(g.num_edges(), size=g.num_edges() * self.edge_per, prob=prob, replace=False))
+        else:
+            print("random")
+            selected_edges = torch.unique(choice(g.num_edges(), size=g.num_edges() * self.edge_per, prob=None, replace=False))
+        add_nodes0, add_nodes1 = torch.cat([src[selected_edges]]), torch.cat([dst[selected_edges]])
+        g_s = g_s.to('cpu')
+        g_s = add_edges(g_s, add_nodes0, add_nodes1)      
+        self.edge_weight = torch.ones(g_s.number_of_edges())
+        
+        print("initialized")
+
+        self.peak_edges = g.num_edges() * self.edge_per
               
         g_s = g_s.to(self.device)
         
@@ -176,16 +183,19 @@ class PreModel:
         print("time: ", end - start, total_aug_time)        
         print("best val acc: ", self.best_val_acc)
 
-        print("avg iter time: ", sum(each_iter_time)/len(each_iter_time))
+        # print("avg iter time: ", sum(each_iter_time)/len(each_iter_time))
 
         with open("result.txt", "a") as f:
-            f.write("SAGE " + str(epoch) + " time:" + str(end - start) + " aug time: " + str(total_aug_time) + " precision:" + str(self.best_val_acc) + '\n')
+            f.write("amazon " + str(self.name) + " " + str(self.prob) + " " + str(epoch) + " time:" + str(end - start) + " aug time: " + str(total_aug_time) + " precision:" + str(self.best_val_acc) + " peak memory:" + str(self.peak_memory) + '\n')
         
         return self.best_graph
 
             
     def simple_edges(self, g, index0, index1):
         mask = g.has_edges_between(index0, index1)
+        # edge_ids = g.edge_ids(index0[mask], index1[mask])
+        # self.edge_weight[edge_ids] += 1
+        # self.edge_weight = torch.concat([self.edge_weight, torch.ones(torch.sum(~mask).item())])
         index0 = index0[~mask]
         index1 = index1[~mask]
         return index0, index1
@@ -196,7 +206,6 @@ class PreModel:
         train_idx = g.ndata['train_mask']
         labels = g.ndata['label']
         val_idx = g.ndata['val_mask']
-        test_idx = g.ndata['test_mask']
         
         print("num of graph edges", g.edges()[0].size()[0])
                
@@ -223,16 +232,24 @@ class PreModel:
             acc = self.evaluate(logits, labels, val_idx)
         
         GPUs = GPUtil.getGPUs()
-        if GPUs[1].memoryUsed > self.most_GPU_memory:
+        self.peak_memory = GPUs[1].memoryUsed
+        if g.number_of_edges() > self.peak_edges:
+            # index0 = g.edges()[0]
+            # index1 = g.edges()[1]
             self.epoch_record = epoch
-            self.whether_train_graph = False
+            dropedge = DropEdge(p=0.01)
+            g = dropedge(g)
+            # mask = g.has_edges_between(index0, index1)
+            # self.edge_weight = self.edge_weight[mask.cpu()]
             self.whether_explain = False
+            # self.whether_train_graph = False
             self.peak_memory = GPUs[1].memoryUsed
+            print(g.number_of_edges())
         
         # print("current process memory used: ", get_gpu_process_info(pid=str(os.getpid())))
         print("gcn training epoch{} train loss :{}, acc: {}, best acc:{}, memory: {}".format(epoch, train_loss, acc, self.best_val_acc, GPUs[1].memoryUsed))
-        with open("record.txt", "a") as f:
-            f.write(str(epoch) + " " + str(train_loss.item()) + " " + str(acc) + '\n')
+        # with open("record.txt", "a") as f:
+        #     f.write(str(epoch) + " " + str(train_loss.item()) + " " + str(acc) + '\n')
         
 
         if acc > self.best_val_acc:
@@ -241,7 +258,7 @@ class PreModel:
         if self.whether_explain == True:
             with torch.no_grad():
                 pre_logits = self.pre_logits
-                self.train_explain(pre_logits, logits.cpu(), train_idx, epoch, g.num_edges(), GPUs[1].memoryUsed, acc)
+                self.train_explain_multi(pre_logits, logits.cpu(), train_idx, epoch, g.num_edges(), GPUs[1].memoryUsed, acc)
                 del logits, train_loss, acc
         else:
             del logits, train_loss, acc
@@ -281,9 +298,9 @@ class PreModel:
         # loss = torch.sum(-pre_log_probs[train_idx, label[train_idx]])
         print("graph difference: ", loss)
         self.hdiff.append(loss.item())
-        with open("record.txt", "a") as f:
+        with open("record_gcn.txt", "a") as f:
             f.write(str(epoch) + " " + str(loss.item()) + " " + str(num_edges) + " " + str(memory) + " " + str(acc) + " " + str(self.explain_threshold)+ '\n')
-        if np.percentile(self.hdiff, 75) >= self.explain_threshold and epoch > 100:
+        if np.percentile(self.hdiff, 25) >= self.explain_threshold and epoch > 100:
             self.whether_train_graph = False
             self.whether_explain = False
             GPUs = GPUtil.getGPUs()
@@ -304,10 +321,11 @@ class PreModel:
         loss = mutual_info_score(pre_logits, logits)
         print("graph difference: ", loss)
         self.hdiff.append(loss)
-        with open("record.txt", "a") as f:
-            f.write(str(epoch) + " " + str(loss) + " " + str(num_edges) + " " + str(memory) + " " + str(acc) + " " + str(self.explain_threshold)+ '\n')
+        # with open("record_gcn_multi.txt", "a") as f:
+        #     f.write(str(epoch) + " " + str(loss) + " " + str(num_edges) + " " + str(memory) + " " + str(acc) + " " + str(self.explain_threshold)+ '\n')
         if np.percentile(self.hdiff, 75) >= self.explain_threshold and epoch > 100:
-            self.whether_train_graph = False
+            # self.whether_train_graph = False
+            self.peak_edges = num_edges
             self.whether_explain = False
             GPUs = GPUtil.getGPUs()
             self.peak_memory = GPUs[1].memoryUsed
@@ -324,8 +342,13 @@ if __name__ == "__main__":
     parser.add_argument('--data', type=str, default=None)
     parser.add_argument('--edges', type=int, default=999999999)
     parser.add_argument('--drop', type=float, default=1)
+    parser.add_argument('--edge_per', type=float, default=1)
+    parser.add_argument('--explain', type=str, default='N')
+    parser.add_argument('--model', type=str, default='gcn')
+    parser.add_argument('--first_size', type=int, default=500000)
+    parser.add_argument('--second_size', type=int, default=100000)
     args = parser.parse_args()
-    print(args.prob, args.memory, args.th, args.data, args.edges, args.drop)
+    print(args.prob, args.memory, args.th, args.data, args.edges, args.drop, args.model, args.edge_per)
 
     if args.data == 'cora':
         transform = (AddSelfLoop()) 
@@ -395,11 +418,11 @@ if __name__ == "__main__":
         g.ndata['train_mask'] = g.ndata['train_mask'].bool()
         g.ndata['val_mask'] = g.ndata['val_mask'].bool()
         g.ndata['test_mask'] = g.ndata['test_mask'].bool()  
-        feats = g.ndata['feat']
-        scaler = StandardScaler()
-        scaler.fit(feats[g.ndata['train_mask']])
-        feats = scaler.transform(feats)
-        g.ndata['feat'] = torch.tensor(feats, dtype=torch.float)
+        # feats = g.ndata['feat']
+        # scaler = StandardScaler()
+        # scaler.fit(feats[g.ndata['train_mask']])
+        # feats = scaler.transform(feats)
+        # g.ndata['feat'] = torch.tensor(feats, dtype=torch.float)
 
     if args.data == 'amazon':
         # load and preprocess Amazon dataset 32
@@ -485,16 +508,17 @@ if __name__ == "__main__":
         print("train nodes: ", torch.sum(g.ndata['train_mask'] == 1))
 
     if args.prob == 'gradient':
-        # for graphsage
-        print("cal probability")
-        d1 = torch.pow(g.out_degrees(), -1.0)
+        # for ours gcn
+        print("cal probability gcn")
+        d1 = torch.pow(g.out_degrees(), -0.5)
         p_norm = []
         for i in g.nodes():
             neighbors = g.out_edges(i)[1].long()
-            d2 = d1[neighbors]
+            d2 = d1[neighbors] * d1[i]
             norm_2 = torch.norm(d2, p=2)
             p_norm.append(norm_2)
         g.ndata['p_norm'] = torch.tensor(p_norm)
+        
 
     if args.prob == 'feature':
         # for graphsaint's prob
@@ -509,19 +533,19 @@ if __name__ == "__main__":
 
     if args.data == 'cora' or args.data == 'citeseet' or args.data == 'pubmed':
         learning_rate = 0.01
-        model = GraphSAGE(g.ndata['feat'].size(1), 128, num_class, 2, F.relu, 0.1, 'gcn')
+        model = GCN(g.ndata['feat'].size(1), 128, num_class).to(device)
     elif args.data == 'reddit':
         learning_rate = 0.01
-        model = GNNModel('sage', 4, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
+        model = GNNModel(args.model, 4, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
     elif args.data == 'amazon':
         learning_rate = 0.01
-        model = GNNModel('sage', 3, 128, g.ndata['feat'].size(1), num_class, 0).to(device)
+        model = GNNModel(args.model, 3, 128, g.ndata['feat'].size(1), num_class, 0).to(device)
     elif args.data == 'products':
         learning_rate = 0.003
-        model = GNNModel('sage', 3, 128, g.ndata['feat'].size(1), num_class, 0).to(device)
+        model = GNNModel(args.model, 3, 128, g.ndata['feat'].size(1), num_class, 0).to(device)
     elif args.data == 'proteins':
         learning_rate = 0.01
-        model = GNNModel('sage', 3, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
+        model = GNNModel(args.model, 3, 256, g.ndata['feat'].size(1), num_class, 0).to(device)
         
     pre_model = PreModel(model, device, args, learning_rate)
     good_edges = pre_model.find_graph(g)
