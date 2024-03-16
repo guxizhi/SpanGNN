@@ -1,6 +1,6 @@
-# QUEEN
+# SpanGNN
 
-QUEEN is a quick incremtnal memory-efficent graph augmentation framework with lower augmentation complexity and peak GPU memory usage.
+SpanGNN: Towards Memory-Efficient Graph Neural Networks via Spanning Subgraph Training.
 
 ## To prepare the environment for running QUEEN.
 
@@ -10,26 +10,26 @@ pip install -r requirements.txt
 
 ## Quick Strat
 
-### How to run QUEEN without mutal information based ealy-stop strategy?
+### How to run SpanGNN?
 
-Runing GCN with QUEEN, the memory limitation is allowed to change according to your need.
+Runing GCN with SpanGNN, the memory limitation is allowed to change according to your need.
 
 ```bash
-python QUEEN_GCN.py --data='reddit' --prob='gradient' --edge_ratio=0.3 --model='gcn'
-python QUEEN_GCN.py --data='reddit' --prob='gradient' --edge_ratio=0.4 --model='gcn'
+python SpanGNN.py --data='reddit' --prob='gradient' --edge_ratio=0.3 --model='gcn'
+python SpanGNN.py --data='reddit' --prob='gradient' --edge_ratio=0.4 --model='gcn'
 ```
 
-Runing GraphSAGE with QUEEN
+Runing GraphSAGE with SpanGNN
 
 ```bash
-python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --edge_ratio=0.3 --model='sage'
-python QUEEN_GraphSAGE.py --data='reddit' --prob='gradient' --edge_ratio=0.4 --model='sage'
+python SpanGNN.py --data='reddit' --prob='gradient' --edge_ratio=0.3 --model='sage'
+python SpanGNN.py --data='reddit' --prob='gradient' --edge_ratio=0.4 --model='sage'
 ```
 
 To change edge sampling strategy, set prob='feature' or prob='gradient'. 
 
 ```bash
-python QUEEN_GCN.py --data='reddit' --prob='feature' --edge_ratio=0.3 --model='gcn'
+python SpanGNN.py --data='reddit' --prob='feature' --edge_ratio=0.3 --model='gcn'
 ```
 
 To change dataset, setting data='xxx' and we support 'cora', 'citesser', 'pubmed', 'reddit', 'products', 'proteins' and 'amazon'. Amazon dataset can be obtained from graphsaint, while other directly obtained by dgl.data.
