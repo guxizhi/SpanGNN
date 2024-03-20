@@ -142,10 +142,9 @@ plt.tight_layout(rect=[0, 0, 1, 0.85])
 plt.show()
 # plt.savefig('../fig_new/merged_gcn.pdf', )
 plt.savefig('../fig_new/merged_sage.pdf', )
-"""=======================LHZ==================================="""
 
 
-"""=======================LHZ==================================="""
+# time consume experiments
 import matplotlib.pyplot as plt
 import numpy as np
 
