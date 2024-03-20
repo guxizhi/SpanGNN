@@ -40,8 +40,20 @@ The training results, including GNN model, total trainig time, total augmentatio
 
 The mutual information based score for mearsure the influential information contained in each partial structure will be recorded in 'record.txt'.
 
-## All figures of experimental results can be obtained by draw.py.
+## Figures of spanning subgraph generation time / Figures of ablation studies can be obtained by uitls/draw.py.
 
 ```bash
 python draw.py
+```
+
+## Figures of performance comparison to Full-graph and DropEdge / Figures of sensitive experiemnts about edge injection rate can be obtained by uitls/draw1.py.
+
+```bash
+python draw1.py
+```
+
+## Figures of memory usage to Full-graph and DropEdge can be obtained by uitls/draw2.py.
+
+```bash
+python draw2.py
 ```
